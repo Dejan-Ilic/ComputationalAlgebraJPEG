@@ -19,14 +19,13 @@ begin
 	#["Images", "TestImages", "PlutoUI", "FFTW", "Plots", "StaticArrays"] .|> Pkg.add
 end
 
-# ╔═╡ 8e448fd4-6a83-48f0-9345-44322f991a49
-begin
-	Pkg.add("Interpolations")
-	using Interpolations
-end
-
 # ╔═╡ 7b2079a5-70bd-4efa-9317-c64f062eaae7
 using Images, TestImages, PlutoUI, FFTW, Plots, StaticArrays, Random
+
+# ╔═╡ 8e448fd4-6a83-48f0-9345-44322f991a49
+begin
+	using Interpolations
+end
 
 # ╔═╡ 28c4e4ce-bfac-4abd-bd1a-ce936d15c0e6
 using LinearAlgebra
@@ -633,14 +632,52 @@ Here's an equation:
 This is the binomial coefficient.
 """
 
-# ╔═╡ d7a8365d-66e0-454b-82b0-0d1290665342
+# ╔═╡ e6105acc-5fa6-453f-9b8e-c7e31d6834b6
 
 
-# ╔═╡ f8a2d5a1-7d41-44c0-afde-f8bc568724f0
+# ╔═╡ 5e78fe3d-4c9a-4597-9ca1-b641874e5996
+#make a 8x8 base image
+baseimg(k) = [8i+j == k ? 1.0 : 0.0 for i=0:7, j=0:7]
 
+# ╔═╡ dcb663f8-5a49-420b-85ba-17b8d60febcc
+#Visualize it
+Gray.(baseimg(5))
 
-# ╔═╡ 8c7e432b-e618-49a4-a106-6dd0bfe3a6b8
+# ╔═╡ 742d65cb-3196-4ace-8e91-65cb4b208696
+#turn baseimg into a function
 
+# ╔═╡ c26e53eb-cfbb-40df-8f11-67d0bb3add1f
+#now make stdbase list
+[Gray.(baseimg(k)) for k=0:63]
+
+# ╔═╡ 45b39cd3-e104-49ca-9a88-3b0ece4edb18
+#now make stdbase matrix
+[Gray.(baseimg(8i + j)) for i=0:7, j=0:7]
+
+# ╔═╡ 4c6f736f-217a-46c5-87d1-3377f9daa953
+#make dct base image function
+dctimg(k) = idct(baseimg(k))
+
+# ╔═╡ 44fb2e5e-4f95-4d08-a1c1-73cda73fca9c
+#test it
+dctimg(0)
+
+# ╔═╡ 7cb01529-b500-4729-8cab-be5985739489
+#define rescale function
+function rescale(U)
+	m = minimum(U)
+	M = maximum(U)
+	
+	return Gray.((U .- m)/(M-m))
+end
+
+# ╔═╡ 6d120b0b-ae51-4874-ae6b-17ed42f1fecf
+#test it
+rescale(dctimg(2))
+
+# ╔═╡ 97ea5326-cbf0-4e56-92fb-e692c5867e77
+#matrix it
+[rescale(dctimg(8i + j)) for i=0:7, j=0:7]
 
 # ╔═╡ 9f01b2fc-1122-449a-92c9-663c734b3eff
 md"""
@@ -884,9 +921,17 @@ end
 # ╠═bb5ff4d0-854b-4297-a887-9062ad6c1a9e
 # ╠═df78b4cb-25a1-41a5-9dce-251f827bd246
 # ╠═d5feba51-64c7-4dfd-97b5-283be7e969dc
-# ╠═d7a8365d-66e0-454b-82b0-0d1290665342
-# ╠═f8a2d5a1-7d41-44c0-afde-f8bc568724f0
-# ╠═8c7e432b-e618-49a4-a106-6dd0bfe3a6b8
+# ╠═e6105acc-5fa6-453f-9b8e-c7e31d6834b6
+# ╠═5e78fe3d-4c9a-4597-9ca1-b641874e5996
+# ╠═dcb663f8-5a49-420b-85ba-17b8d60febcc
+# ╠═742d65cb-3196-4ace-8e91-65cb4b208696
+# ╠═c26e53eb-cfbb-40df-8f11-67d0bb3add1f
+# ╠═45b39cd3-e104-49ca-9a88-3b0ece4edb18
+# ╠═4c6f736f-217a-46c5-87d1-3377f9daa953
+# ╠═44fb2e5e-4f95-4d08-a1c1-73cda73fca9c
+# ╠═7cb01529-b500-4729-8cab-be5985739489
+# ╠═6d120b0b-ae51-4874-ae6b-17ed42f1fecf
+# ╠═97ea5326-cbf0-4e56-92fb-e692c5867e77
 # ╠═9f01b2fc-1122-449a-92c9-663c734b3eff
 # ╠═8e448fd4-6a83-48f0-9345-44322f991a49
 # ╟─d33ef724-4bb7-4be5-a9cf-14a928fb2289
