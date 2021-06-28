@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.7
+# v0.14.8
 
 using Markdown
 using InteractiveUtils
@@ -17,6 +17,12 @@ end
 begin
 	using Pkg
 	#["Images", "TestImages", "PlutoUI", "FFTW", "Plots", "StaticArrays"] .|> Pkg.add
+end
+
+# ╔═╡ 8e448fd4-6a83-48f0-9345-44322f991a49
+begin
+	Pkg.add("Interpolations")
+	using Interpolations
 end
 
 # ╔═╡ 7b2079a5-70bd-4efa-9317-c64f062eaae7
@@ -652,14 +658,72 @@ te doen
 
 """
 
-# ╔═╡ 8e448fd4-6a83-48f0-9345-44322f991a49
-
-
 # ╔═╡ d33ef724-4bb7-4be5-a9cf-14a928fb2289
+let
+	function decode_channel(F)
+		f = similar(F)
+		C(u) = sqrt(1/2)^Float64(u==0);
+
+		for blockx=0:(size(f,2)÷8-1)
+			for blocky=0:(size(f,1)÷8 - 1)
+				F_sub = F[ (blocky*8+1):(blocky*8+8), (blockx*8+1):(blockx*8+8)];
+				u = (0:7)';
+				v = (0:7)';
+				for x=0:7
+					cos_vec_xu = @. cos( (2* x + 1) * u * pi/16);
+					for y=0:7
+						cos_vec_yv = @. cos( (2* y + 1) * (0:7)' * pi/16);
+
+						cos_vec = (cos_vec_xu' * cos_vec_yv);
+						C_sub = @. C(u)' * C(v);
+
+						tot = sum(sum( F_sub .* C_sub .* cos_vec));
+
+						f[blocky*8 + x + 1, blockx*8 + y + 1] = 1/4*tot;
+					end
+				end
+			end
+		end
+
+		f = f .+ 128;
+
+		return f
+	end
+	
+	
+	c = 1016;
+	T = ones(8*8 + 7, 8*8 + 7)*(-1);
+	F = zeros(8, 8);
+
+	for i=1:8
+		for j=1:8
+			F[i,j] = c;
+			df = floor.(decode_channel(F));
+			F[i,j] = 0;
+
+			i1 = 1 + (i-1)*9;
+			j1 = 1 + (j-1)*9;
+
+			dfmax = maximum(maximum(df))
+			dfmin = minimum(minimum(df))
+
+			T[i1:(i1+7), j1:(j1+7)] = floor.( (df .- dfmin) / (dfmax - dfmin) * 255 .+ 0.5)
+		end
+	end
+
+	#T = imresize(T, 12, 'nearest');
+	T[1:8, 1:8] .= 255; #anders is de bovenste tegel zwart.
+
+	Tr = deepcopy(T);
+	Tr[Tr .== -1] .= 255;
+	T[T .== -1] .= 0;
+
+	T = T / 255
+	Tr = Tr / 255
 
 
-# ╔═╡ 7779035a-b8d2-416e-8e8e-def4faa5b907
-
+	imresize(RGB.(Tr, T, T), method=Interpolations.Constant(), ratio=8)
+end
 
 # ╔═╡ bbc98009-e757-4936-8251-d57426b8cb9b
 
@@ -701,6 +765,11 @@ end
 
 # ╔═╡ de0ba933-75c6-4548-8e95-78bfba8e6d4a
 
+
+# ╔═╡ d6ed210d-2774-4a16-8f02-2e0391dce749
+function u(α)
+	return π * α
+end 
 
 # ╔═╡ Cell order:
 # ╟─0a05e850-cb9f-11eb-39cb-3d183bb8d5a9
@@ -810,7 +879,7 @@ end
 # ╟─b8e78721-fab9-4e10-bcd4-a3e2fed3e4d6
 # ╠═34df0824-f264-4493-b7b4-0c9946d03310
 # ╟─e596f8c0-a7e7-4e92-99a8-3da11620aeab
-# ╠═f976fa97-08c9-4a87-90fd-3d757359a53b
+# ╟─f976fa97-08c9-4a87-90fd-3d757359a53b
 # ╟─c81c323f-3137-46e3-8b54-445a440f1cf9
 # ╠═bb5ff4d0-854b-4297-a887-9062ad6c1a9e
 # ╠═df78b4cb-25a1-41a5-9dce-251f827bd246
@@ -820,8 +889,7 @@ end
 # ╠═8c7e432b-e618-49a4-a106-6dd0bfe3a6b8
 # ╠═9f01b2fc-1122-449a-92c9-663c734b3eff
 # ╠═8e448fd4-6a83-48f0-9345-44322f991a49
-# ╠═d33ef724-4bb7-4be5-a9cf-14a928fb2289
-# ╠═7779035a-b8d2-416e-8e8e-def4faa5b907
+# ╟─d33ef724-4bb7-4be5-a9cf-14a928fb2289
 # ╠═bbc98009-e757-4936-8251-d57426b8cb9b
 # ╠═8425a6ff-b968-4245-b351-face7d874a2b
 # ╠═371b82c0-518f-4a23-8d83-9775aefdfb76
@@ -833,3 +901,4 @@ end
 # ╠═28c4e4ce-bfac-4abd-bd1a-ce936d15c0e6
 # ╠═6ce1d16b-479f-4175-9943-fbc611dcee9c
 # ╠═de0ba933-75c6-4548-8e95-78bfba8e6d4a
+# ╠═d6ed210d-2774-4a16-8f02-2e0391dce749
