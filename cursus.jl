@@ -679,6 +679,13 @@ rescale(dctimg(2))
 #matrix it
 [rescale(dctimg(8i + j)) for i=0:7, j=0:7]
 
+# ╔═╡ 6b5368f1-ac22-489b-a95b-d51696472e17
+#same with real(fft)
+fftimg(k) = real(ifft(baseimg(k)))
+
+# ╔═╡ c32eaf9d-3939-40ec-a7fb-83b911387591
+[rescale(fftimg(8i + j)) for i=0:7, j=0:7]
+
 # ╔═╡ 9f01b2fc-1122-449a-92c9-663c734b3eff
 md"""
 Een poging om buiten inline ``f(x) = \sin(x^{\sqrt{22}})`` ook
@@ -932,6 +939,8 @@ end
 # ╠═7cb01529-b500-4729-8cab-be5985739489
 # ╠═6d120b0b-ae51-4874-ae6b-17ed42f1fecf
 # ╠═97ea5326-cbf0-4e56-92fb-e692c5867e77
+# ╠═6b5368f1-ac22-489b-a95b-d51696472e17
+# ╠═c32eaf9d-3939-40ec-a7fb-83b911387591
 # ╠═9f01b2fc-1122-449a-92c9-663c734b3eff
 # ╠═8e448fd4-6a83-48f0-9345-44322f991a49
 # ╟─d33ef724-4bb7-4be5-a9cf-14a928fb2289
