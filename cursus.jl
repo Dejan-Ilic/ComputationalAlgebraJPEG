@@ -16,14 +16,6 @@ end
 # ╔═╡ 7b2079a5-70bd-4efa-9317-c64f062eaae7
 using Images, TestImages, PlutoUI, FFTW, Plots, StaticArrays, Random
 
-# ╔═╡ 8e448fd4-6a83-48f0-9345-44322f991a49
-begin
-	using Interpolations
-end
-
-# ╔═╡ 28c4e4ce-bfac-4abd-bd1a-ce936d15c0e6
-using LinearAlgebra
-
 # ╔═╡ 0a05e850-cb9f-11eb-39cb-3d183bb8d5a9
 md"""
 # Computational Algebra
@@ -864,7 +856,7 @@ First, define the value ``k_m`` from the DCT equations as a function:"
 function k(m::Int)
 	#implement this function correctly
 	
-	return 0
+	return (m == 0 ? 1/sqrt(2) : 1.0)
 end
 
 # ╔═╡ efb1196c-7724-4326-8874-db0cf14b99ff
@@ -1010,25 +1002,46 @@ Set ``\omega = \exp\left(\frac{2\pi i}{4n}\right)``, then
 
 # ╔═╡ 148934fb-1996-424e-8b0c-3a5a4646060f
 md"#### 2D DCT
-
-
-
-
-"
-
-# ╔═╡ e6105acc-5fa6-453f-9b8e-c7e31d6834b6
-md"``2\times 2`` images can be constructed from the *standard* basis
+Analogous to 1D signals, 2D signals too can be constructed from basis vectors. For example, ``2\times 2`` images can be constructed from the *standard* basis
 ```math
 \left\{ \left[\begin{array}{cc} 1 & 0\\ 0&0\end{array}\right], \left[\begin{array}{cc} 0 & 1\\ 0&0\end{array}\right],\left[\begin{array}{cc} 0 & 0\\ 1&0\end{array}\right],\left[\begin{array}{cc} 0 & 0\\ 0&1\end{array}\right] \right\}
 ```
+The JPEG standard uses the same idea we previously illustrated on 1D signals on 2D signals. It does so by using the the 2D DCT on ``8\times 8`` sub-patches of images, and compressing each individual patch.
 "
 
-# ╔═╡ 3a77a494-d17a-4bcc-b59f-4668c07e31bc
-md"Now use a list comprehension to define the standard basis for ``8\times 8`` image patches."
+
+# ╔═╡ e6105acc-5fa6-453f-9b8e-c7e31d6834b6
+md"
+The forward 2D DCT is given by 
+```math
+F(u,v) = \frac{1}{4} k_u k_v \sum_{x=0}^7 \sum_{y=0}^7 f(x,y) \cos\left(\frac{(2x+1)u\pi}{16}\right)\cos\left(\frac{(2y+1)v\pi}{16}\right)
+```
+where ``u,v = 0,1,\ldots,7``.
+
+The inverse 2D DCT is given by
+```math
+f(x,y) = \frac{1}{4}\sum_{u=0}^7\sum_{v=0}^7 k_u k_v F(u,v) \cos\left(\frac{(2x+1)u\pi}{16}\right)\cos\left(\frac{(2y+1)v\pi}{16}\right)
+```
+where ``x,y = 0,1,\ldots,7``.
+
+Let's immediately implement these the `fDCT` and the `iDCT`. Keep in mind that Julia Arrays are indexed from 1 to `n`.
+"
+
+# ╔═╡ a09f9366-212f-422c-87b6-122a2df65e9b
+function fDCT(f::AbstractMatrix)
+	return 1/4 * [k(u)*k(v)*sum(f[x+1, y+1] * cos( (2*x + 1)*u*π/16) * cos( (2*y + 1)*v*π/16) for x=0:7, y=0:7) for u=0:7, v=0:7]
+	#return zeros(N, N) #exercise: replace
+end
+
+# ╔═╡ 2f8ec2f9-d898-4aed-8fa6-8da92c16ebe2
+function iDCT(F::AbstractMatrix)
+	return 1/4 * [sum(k(u)*k(v)*F[u+1, v+1] * cos( (2*x + 1)*u*π/16) * cos( (2*y + 1)*v*π/16) for u=0:7, v=0:7) for x=0:7, y=0:7]
+	#return zeros(N, N) #exercise: replace
+end
 
 # ╔═╡ bb5ff4d0-854b-4297-a887-9062ad6c1a9e
 begin
-	function showimage(img::AbstractMatrix{<:Integer})
+	function showimage(img::AbstractMatrix)
 		return Gray.( img ./ 255)
 	end
 	
@@ -1045,23 +1058,54 @@ begin
 	
 	ape = int.(mandrill_gray)
 	
-md"""**Remark:** During this session you will have to write some code. This cell  defines some convenience functions and variables behind the scenes.
+	ape_8x8 = ape[100:107, 100:107]
 	
-The first one is the variable `ape`, which contains the gray mandrill picture, in traditional 0-255 format:
+	#quantization table:
+	Q_table = [
+		16 11 10 16 24  40  51  61;
+		12 12 14 19 26  58  60  55;
+		14 13 16 24 40  57  69  56;
+		14 17 22 29 51  87  80  62;
+		18 22 37 56 68  109 103 77;
+		24 35 55 64 81  104 113 92;
+		49 64 78 87 103 121 120 101;
+		72 92 95 98 112 100 103 99;
+		];
+
+	#Test image from JPEG standard document for verification
+	test_snippet = 
+	[139 144 149 153 155 155 155 155;
+	144 151 153 156 159 156 156 156;
+	150 155 160 163 158 156 156 156;
+	159 161 162 160 160 159 159 159;
+	159 160 161 162 162 155 155 155;
+	161 161 161 161 160 157 157 157;
+	162 162 161 163 162 157 157 157;
+	162 162 161 161 163 158 158 158];
+	
+md"""In the remainder of this section, we will recreate our results of the 1D case in 2D. In order to free you of the burden of technicalities, this cell  defines some convenience functions and variables behind the scenes. They will be introduced at the appropriate times.
 """
 end
 
-# ╔═╡ df78b4cb-25a1-41a5-9dce-251f827bd246
-ape
+# ╔═╡ 0a95216c-7067-41f9-bc4f-21131621dca7
+md"First, let's create 2D basis functions as we did in the 1D case. For ``8\times 8`` images, the (standard) basis consists of 64 basis images/vectors, numbered 1 through 64. Complete the following function. Note that you can index matrices with a single index. "
 
-# ╔═╡ 60ef8a59-dd84-4ab6-89a5-57f5af9f73de
-md"Next, we have the `showimage` function which can be used to show (slices of) images such as `ape`:"
+# ╔═╡ c1a08b76-6049-49db-96f1-cfaa69ca9c99
+function basisimage(n::Int)
+	u = zeros(N, N)
+	#exercise: complete this function
+	u[n]=1
+	return u
+end
 
-# ╔═╡ 77505144-d848-4f92-94c5-e5ea2c79fc07
-showimage(ape[100:300, 100:400])
+# ╔═╡ ef704eb3-8822-4894-83d2-db4087a96301
+md"The next cell tests your implementation"
+
+# ╔═╡ 55fc2fd1-769a-4ec4-bd24-8976198440e0
+basisimage(10)
 
 # ╔═╡ d57511ea-a62c-4a46-9a6a-22bf3123d76b
-md"And finally the `showmatrix` function which rescales *arbitrary* matrices to a displayable range. Take for example a `` 4\times 4`` `randn` matrix, which has values ranging from e.g. -3 to +3 (depending on randomness of course):"
+md"The `showmatrix` function rescales *arbitrary* matrices to a displayable range. Take for example a `` 4\times 4`` `randn` matrix, which has values ranging from e.g. -3 to +3 (depending on randomness of course):"
 
 # ╔═╡ dec56ad0-58e9-456e-a75d-090865149dbb
 randn_test = randn(4,4)
@@ -1069,243 +1113,614 @@ randn_test = randn(4,4)
 # ╔═╡ 0a7d25d5-340e-45be-a1be-abb1cbf6ef36
 showmatrix(randn_test)
 
-# ╔═╡ 5e78fe3d-4c9a-4597-9ca1-b641874e5996
-#make a 8x8 base image generating function
-function baseimg(k)
-	M = zeros(8,8)
-	M[k] = 1
-	return M
+# ╔═╡ 30d219a6-f259-477d-b532-70ac0a0baa7e
+md"This means you can also use `showmatrix` to display your `basisimage` matrices in a more visually pleazing manner."
+
+# ╔═╡ 13fd6c8d-ebb4-42a4-8b91-a15d750e5de7
+#exercise: use showmatrix in combination with basisimage
+
+# ╔═╡ fe9587bb-3683-420e-bb16-8bdb9db82fc3
+md"The next cell will visualize `baseimage(1)` to `baseimage(64)` in a grid pattern, allowing you to verify the correctness of your implementation."
+
+# ╔═╡ 5a2a34e8-4447-4a02-b9a5-f3edcea0a51e
+[showmatrix(basisimage(8*i + j + 1)) for i=0:7, j=0:7]
+
+# ╔═╡ bac76ace-6cc5-4488-9ac2-d6a91167504a
+md"As an exercise, modify the code used to generate the basisimages above to show the 2D DCT basis just like we did in the 1D case."
+
+# ╔═╡ ff264ac0-aaeb-4992-acfa-0ebad0edf7a5
+md"Before you try the entire grid, try to visualize a single DCT basis image."
+
+# ╔═╡ 2f81e240-e0b5-4442-b855-0b21c5e15993
+#single image
+10 |> basisimage |> iDCT |> showmatrix
+
+# ╔═╡ 71503507-8270-4162-bf03-09c7edc1dd4e
+md"If that works you can try the entire grid:"
+
+# ╔═╡ d5a73aac-eff1-4040-a7c3-9b0f254d8391
+#exercise: entire grid
+
+# ╔═╡ 4250d162-d613-457c-92d8-9733c96adb63
+[showmatrix(iDCT(basisimage(8*i + j + 1))) for i=0:7, j=0:7]
+
+# ╔═╡ 1a06a96a-6324-40de-bec1-0189bf90a543
+md"Let's try to use our DCT functions on an ``8\times 8`` image."
+
+# ╔═╡ b456a6a1-230f-493b-94e5-a89849ed3449
+md"The variable `ape_8x8` contains an ``8\times 8`` subsample of the mandrill image."
+
+# ╔═╡ bb7a7573-ee76-425f-b6ec-7a5a463b9b9d
+ape_8x8
+
+# ╔═╡ 5ce72eab-faf7-4403-856b-675e7a2de675
+md"You can also visualize it using the `showimage` function."
+
+# ╔═╡ 9a07d873-a1ab-4d8d-8c13-3cf1c51ad29e
+showimage(ape_8x8)
+
+# ╔═╡ 7fb8fddb-85d5-4b59-800b-29d0b6333b6f
+md"Now we compute the forward DCT transform of `ape_8x8`"
+
+# ╔═╡ 9f01466c-94c1-4352-a449-56d06ed61fb1
+F_ape_8x8 = fDCT(ape_8x8)
+
+# ╔═╡ 8de75a30-40cd-4632-a52f-361ac7c3beca
+md"This yields an ``8\times 8`` matrix. Next we set all entries smaller than a certain threshold to zero."
+
+# ╔═╡ 5f82b60e-bd01-4af3-a293-8b8b96bac45d
+threshold = 20
+
+# ╔═╡ 69c459d0-e627-4ddb-b3c3-a4c971a8c383
+F_ape_8x8_compressed = [abs(F) < threshold ? 0.0 : F for F in F_ape_8x8]
+
+# ╔═╡ 1a92c635-f369-490e-afbf-5b38bd41cb79
+md"We reconstruct the image with the compressed DCT coefficients (and we round to integers)."
+
+# ╔═╡ 31e59ae6-0ad5-4937-a6e3-d7efb79a4051
+ape_8x8_reconstructed = round.(Int, iDCT(F_ape_8x8_compressed))
+
+# ╔═╡ 2356b679-cc2e-45cd-bb4f-8929c14d3942
+md"Finally, we visually inspect the images (original: left, reconstructed: right)."
+
+# ╔═╡ a01926fa-fc32-44dc-9c38-00cfb27b9d38
+[showimage(ape_8x8), showimage(ape_8x8_reconstructed)]
+
+# ╔═╡ 6d42670a-1046-47b4-a8cb-bb8ff35f16e9
+md"The JPEG algorithm works in a similar way, except for the thresholding. Instead of thresholding, quantization is used."
+
+# ╔═╡ 13cea041-fb29-455d-b5d7-72fdef4d3cbe
+md"#### Quantization
+Given DCT coefficients ``F`` (an ``8\times 8`` matrix) and a *quantization table* ``Q``, we compute the quantized version of ``F``, ``F^Q(u,v)``, according to the following formula:
+
+```math
+F^Q(u,v) = \left\lfloor\frac{F(u,v)}{Q(u,v)} + \frac{1}{2}\right\rfloor
+```
+
+Dequantizing ``F^Q`` is done by a simple multiplication:
+```math
+F'(u,v) = F^Q(u,v) * Q(u,v)
+```
+
+"
+
+# ╔═╡ f679a00d-cb26-40e2-ac57-a9b66dd448a2
+md"A quantization table has to be provide by the person encoding the image and stored as meta-data within a JPEG file. Programs such as Photoshop define their own quantization tables. 
+
+In the paper that describes the JPEG standard, the following quantization table, `Q_table`, is used to demonstrate the algorithm:"
+
+# ╔═╡ ee1ff74a-54a7-4952-8dce-47889df3119f
+Q_table
+
+# ╔═╡ f3528adc-0956-41f7-b796-19d6d92c7098
+md"Notice how the low-frequency basis vectors (left upper corner) are quantized less sharply than the high-frequency basis vectors (right lower corner). This is because the human eye is more sensitive to compression/quantization in the low-frequency coefficients.
+
+Let's implement our own `quantize` and `dequantize` functions. You can use `round(Int, x)` to round a number x and convert it to an `Int`. You can use `floor.(Int, X)` to round an entire matrix."
+
+# ╔═╡ 86263d1a-a12d-45ba-b86f-7b9ad8c21dc6
+function quantize(F::AbstractMatrix, Q::AbstractMatrix)
+	return floor.(Int, F./Q .+ 0.5) #exercise: implement correctly
 end
 
-# ╔═╡ dcb663f8-5a49-420b-85ba-17b8d60febcc
-#Visualize it
-baseimg(10)
-
-# ╔═╡ 742d65cb-3196-4ace-8e91-65cb4b208696
-#Pretty view
-Gray.(baseimg(46))
-
-# ╔═╡ c26e53eb-cfbb-40df-8f11-67d0bb3add1f
-#now make stdbase list
-[Gray.(baseimg(k)) for k=1:64]
-
-# ╔═╡ 45b39cd3-e104-49ca-9a88-3b0ece4edb18
-#now make stdbase matrix
-[Gray.(baseimg(8*i + j + 1)) for i=0:7, j=0:7]
-
-# ╔═╡ 4c6f736f-217a-46c5-87d1-3377f9daa953
-#make dct base image function
-dctbasis(k) = idct(baseimg(k))
-
-# ╔═╡ 44fb2e5e-4f95-4d08-a1c1-73cda73fca9c
-#test it
-dctbasis(2)
-
-# ╔═╡ 7cb01529-b500-4729-8cab-be5985739489
-#define rescale function
-function rescale(U)
-	m = minimum(U)
-	M = maximum(U)
-	return Gray.(  (U .- m)/(M - m))
+# ╔═╡ e879c414-3d15-492a-b7d9-a903918f6f65
+function dequantize(FQ::AbstractMatrix, Q::AbstractMatrix)
+	return FQ .* Q #exercise: implement correctly
 end
 
-# ╔═╡ 6d120b0b-ae51-4874-ae6b-17ed42f1fecf
-#test it
-rescale(dctbasis(6))
+# ╔═╡ bab971b7-1bf5-4598-8dde-e68ac01a849e
+md"Instead of thresholding `F_ape_8x8` like we did earlier, let's try to quantize it this time. Store the result in `F_ape_8x8_Q`."
 
-# ╔═╡ 97ea5326-cbf0-4e56-92fb-e692c5867e77
-#matrix it
-[rescale(dctbasis(8*i + j + 1)) for i=0:7, j=0:7]
+# ╔═╡ 65c94021-1109-4c6d-994f-52ef441a527f
+#quantize F_ape_8x8
+F_ape_8x8_Q  = quantize(F_ape_8x8, Q_table)
 
-# ╔═╡ 6b5368f1-ac22-489b-a95b-d51696472e17
-#same with real(fft)
-fftbasis(k) = real(ifft(baseimg(k)))
+# ╔═╡ 7c817342-0139-4e95-831b-502b3e0d26e3
+md"Now dequantize `F_ape_8x8_Q` and store the result in `F_ape_8x8_dQ`. Compare it to `F_ape_8x8`, the variable you are trying to compress."
 
-# ╔═╡ c32eaf9d-3939-40ec-a7fb-83b911387591
-#visualize matrix
-[rescale(fftbasis(8*i + j + 1)) for i=0:7, j=0:7]
+# ╔═╡ 89f19fec-c049-4829-a991-218f58696ea9
+#dequantize ape_8x8_Q
+F_ape_8x8_dQ = dequantize(F_ape_8x8_Q, Q_table)
 
-# ╔═╡ 9f01b2fc-1122-449a-92c9-663c734b3eff
-md"""
-Een poging om buiten inline ``f(x) = \sin(x^{\sqrt{22}})`` ook
-```math
-\begin{equation}
-\partial^2 \approx 7
-\end{equation}
-```
-en dan verder
-```math
-\sqrt{\frac{\int_0^\infty f(u) du}{\frac{df}{dx}}} = \int_0^\infty \sin\sum
-```
-te doen
+# ╔═╡ f1fdb1f9-0d20-4c6a-9c0b-927d19d5405e
+F_ape_8x8
 
-"""
+# ╔═╡ 8a4b5232-1514-4bdc-903c-71f60c6a509f
+md"Then finally, reconstruct the image from `F_ape_8x8_dQ`. (You don't have to round the final result, the `showimage` function takes care of that.)"
 
-# ╔═╡ d33ef724-4bb7-4be5-a9cf-14a928fb2289
-let
-	function decode_channel(F)
-		f = similar(F)
-		C(u) = sqrt(1/2)^Float64(u==0);
+# ╔═╡ 4acb726f-e4e4-436c-8195-990407038cf4
+[showimage(ape_8x8), showimage(iDCT(F_ape_8x8_dQ))]
 
-		for blockx=0:(size(f,2)÷8-1)
-			for blocky=0:(size(f,1)÷8 - 1)
-				F_sub = F[ (blocky*8+1):(blocky*8+8), (blockx*8+1):(blockx*8+8)];
-				u = (0:7)';
-				v = (0:7)';
-				for x=0:7
-					cos_vec_xu = @. cos( (2* x + 1) * u * pi/16);
-					for y=0:7
-						cos_vec_yv = @. cos( (2* y + 1) * (0:7)' * pi/16);
+# ╔═╡ 1709e9d6-99f1-420c-96d8-bfa91f45935f
+md"#### Huffman trees
 
-						cos_vec = (cos_vec_xu' * cos_vec_yv);
-						C_sub = @. C(u)' * C(v);
+To compress the quantized DCT coefficients, a Huffman tree is used. Huffman trees will not be explained in this notebook. 
 
-						tot = sum(sum( F_sub .* C_sub .* cos_vec));
+We will not implement the huffman functions here."
 
-						f[blocky*8 + x + 1, blockx*8 + y + 1] = 1/4*tot;
-					end
-				end
-			end
-		end
+# ╔═╡ 1cb0d614-6c98-48e4-9828-9cec4cbcfc80
+function huffman(x) #returns huffman tree
+	return x
+end
 
-		f = f .+ 128;
+# ╔═╡ 0a36a17d-7e4c-4cd6-9127-4caafe37e701
+function dehuffman(huffmantree) #decodes huffman tree and returns image
+	return huffmantree
+end
 
-		return f
-	end
+# ╔═╡ 3dd3d3ca-c880-41f7-a2e1-386d5d26f5c4
+reshape(rand(64), (8,8))
+
+# ╔═╡ e8cd9018-3ca4-45c9-80ad-abba24f59092
+begin
+	crappy_pdf_copy(x) = copy(reshape(x, (8,8))')
+	jpeg_test = [139
+144
+149
+153
+155
+155
+155
+155
+144
+151
+153
+156
+159
+156
+156
+156
+150
+155
+160
+163
+158
+156
+156
+156
+159
+161
+162
+160
+160
+159
+159
+159
+159
+160
+161
+162
+162
+155
+155
+155
+161
+161
+161
+161
+160
+157
+157
+157
+162
+162
+161
+163
+162
+157
+157
+157
+162
+162
+161
+161
+163
+158
+158
+158] |> crappy_pdf_copy
+	
+	solution_jpeg_test_fdct = [235.6
+-1.0
+-12.1
+-5.2
+2.1
+-1.7
+-2.7
+1.3
+-22.6
+-17.5
+-6.2
+-3.2
+-2.9
+-0.1
+0.4
+-1.2
+-10.9
+-9.3
+-1.6
+1.5
+0.2
+-0.9
+-0.6
+-0.1
+-7.1
+-1.9
+0.2
+1.5
+0.9
+-0.1
+0
+0.3
+-0.6
+-0.8
+1.5
+1.6
+-0.1
+-0.7
+0.6
+1.3
+1.8
+-0.2
+1.6
+-0.3
+-0.8
+1.5
+1.0
+-1.0
+-1.3
+-0.4
+-0.3
+-1.5
+-0.5
+1.7
+1.1
+-0.8
+-2.6
+1.6
+-3.8
+-1.8
+1.9
+1.2
+-0.6
+-0.4] |> crappy_pdf_copy
+	
+		solution_jpeg_test_q = [15
+0
+-1
+0
+0
+0
+0
+0
+-2
+-1
+0
+0
+0
+0
+0
+0
+-1
+-1
+0
+0
+0
+0
+0
+0
+-1
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0] |> crappy_pdf_copy
+	
+	solution_jpeg_test_dq = [240
+0
+-10
+0
+0
+0
+0
+0
+-24
+-12
+0
+0
+0
+0
+0
+0
+-14
+-13
+0
+0
+0
+0
+0
+0
+-14
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0] |> crappy_pdf_copy
+	
+	solution_jpeg_test_rec = [142
+144
+147
+150
+152
+153
+154
+154
+149
+150
+153
+155
+156
+157
+156
+156
+157
+158
+159
+161
+161
+160
+159
+158
+162
+162
+163
+163
+162
+160
+158
+157
+162
+162
+162
+162
+161
+158
+156
+155
+160
+161
+161
+161
+160
+158
+156
+154
+160
+160
+161
+162
+161
+160
+158
+157
+160
+161
+163
+164
+164
+163
+161
+160] |> crappy_pdf_copy
+	
+
 	
 	
-	c = 1016;
-	T = ones(8*8 + 7, 8*8 + 7)*(-1);
-	F = zeros(8, 8);
+	md"""#### JPEG on ``8\times 8`` block
 
-	for i=1:8
-		for j=1:8
-			F[i,j] = c;
-			df = floor.(decode_channel(F));
-			F[i,j] = 0;
+Summary:
 
-			i1 = 1 + (i-1)*9;
-			j1 = 1 + (j-1)*9;
+`img -> img - 128 -> fDCT -> Quantize -> Huffmann -> save `
 
-			dfmax = maximum(maximum(df))
-			dfmin = minimum(minimum(df))
+`load -> de-Huffmann -> Dequantize -> iDCT -> img' + 128 -> img'`
 
-			T[i1:(i1+7), j1:(j1+7)] = floor.( (df .- dfmin) / (dfmax - dfmin) * 255 .+ 0.5)
+Let's apply this on the ``8\times 8`` `jpeg_test` image. This same patch is also used in the paper that describes the JPEG standard. 
+	
+	Complete the following cells to execute the JPEG algorithm. The correct (but rounded) outputs are defined behind the scenes so that you can compare them, `solution_jpeg_test_[x]`, with your solution `jpeg_test_[x]`.
+
+"""
+end
+
+# ╔═╡ 5269f2a7-497f-41d4-b44d-472555d07d47
+jpeg_test
+
+# ╔═╡ 2614f4f5-948f-44c7-aa21-99e5770c95d9
+jpeg_test_fdct = fDCT(jpeg_test .- 128)
+
+# ╔═╡ a7ac9dd8-7266-464a-aa64-58e53011e386
+jpeg_test_q = quantize(jpeg_test_fdct, Q_table)
+
+# ╔═╡ 12b5561c-380b-4977-9bfa-872d1724e522
+jpeg_test_huffman = huffman(jpeg_test_q);
+
+# ╔═╡ f58c38ec-e016-4cd6-a569-0945ab5bb66a
+jpeg_test_dehuffman = dehuffman(jpeg_test_huffman);
+
+# ╔═╡ 516d5b58-ead5-4486-b858-dbca430afe5a
+jpeg_test_dq = dequantize(jpeg_test_dehuffman, Q_table)
+
+# ╔═╡ 446ffc52-c905-4dc6-bbde-cd3d17df9211
+jpeg_test_rec = iDCT(jpeg_test_dq) .+ 128
+
+# ╔═╡ 1883f6ea-048d-4833-8ab2-523c66c5f2e0
+md"""#### JPEG on an entire image
+To be able to reuse our functions that operate on ``8\times 8`` subimages, we are provided with the function `apply_on_sub(f::Function, input::Matrix)` which applies the function `f` on all the ``8\times 8`` subimages of the `input` image."""
+
+# ╔═╡ 017ef853-3b84-44b7-90d9-0111aebd0d13
+function apply_on_sub(f::Function, input::Matrix, blocksize::Int = 8)
+	output = similar(input, Float64)
+	
+	for j=1:blocksize:size(input,2) 
+		for i=1:blocksize:size(input,1)
+			output[i:i+blocksize-1, j:j+blocksize-1] .= 
+								f(input[i:i+blocksize-1, j:j+blocksize-1])
 		end
 	end
-
-	#T = imresize(T, 12, 'nearest');
-	T[1:8, 1:8] .= 255; #anders is de bovenste tegel zwart.
-
-	Tr = deepcopy(T);
-	Tr[Tr .== -1] .= 255;
-	T[T .== -1] .= 0;
-
-	T = T / 255
-	Tr = Tr / 255
-
-
-	imresize(RGB.(Tr, T, T), method=Interpolations.Constant(), ratio=8)
+	
+	return output
 end
 
-# ╔═╡ bbc98009-e757-4936-8251-d57426b8cb9b
+# ╔═╡ 7a2c0a9a-e403-4c8c-9acd-514a27df3500
+md"To demonstrate the usage of this function, we define a test image `subimg_test`, consisting of two ``2\times 2`` blocks (instead of two ``8\times 8`` for convenience). We then define the function `sub_func`, which takes a subimage as input and outputs that subimage with the minimum of the subimage added to every entry.
 
+This means the left half will be reduced by 1, while the right half will be increased by two."
 
-# ╔═╡ 8425a6ff-b968-4245-b351-face7d874a2b
+# ╔═╡ 06d04c0e-2e10-4589-81be-23345901fcf9
+subimg_test = [1 -1 2 2;
+			  -1  1 2 2]
 
-
-# ╔═╡ 371b82c0-518f-4a23-8d83-9775aefdfb76
-
-
-# ╔═╡ 9da5dc21-db80-4ea1-b54d-d774bd8c94a4
-
-
-# ╔═╡ 226b6612-7f60-44c6-8452-cba9b318b1ca
-md""" 
-## How do images work?
-"""
-
-# ╔═╡ 72de7fb2-8288-4bc5-8293-eeed4016563f
-md""" Blablabla en
-
-``\sum_{x=0}^{N-1} f(x)e^{\frac{2\pi i x}{N}}`` 
-
-is een som in Latex.
-"""
-
-# ╔═╡ 807854a1-032f-4dd9-8e50-895b92d23322
-H = zeros(4,4)
-
-# ╔═╡ 4ce1ccad-36a4-41be-97e6-10fc4586cdad
-h = [8 9 14]
-
-# ╔═╡ 6ce1d16b-479f-4175-9943-fbc611dcee9c
-let 
-	a = [1 2 3 4]
-	vec(a)
-	diagm(vec(a))
+# ╔═╡ 452cabc2-2e01-4b03-9643-24da8dcca6a3
+function sub_func(x::AbstractMatrix)
+	m = minimum(x)
+	
+	return x .+ m
 end
 
-# ╔═╡ de0ba933-75c6-4548-8e95-78bfba8e6d4a
+# ╔═╡ 4a6cc610-72aa-4286-9168-875612ff5cf4
+apply_on_sub(sub_func, subimg_test, 2)
 
+# ╔═╡ 84956860-b04d-4796-b70d-eb0edf95b5a1
+md"We of course want to use this `apply_on_sub` function to reuse our previous functions. Let's go through a full application of the JPEG algorithm."
 
-# ╔═╡ d6ed210d-2774-4a16-8f02-2e0391dce749
-function u(α)
-	return π * α
-end 
+# ╔═╡ df78b4cb-25a1-41a5-9dce-251f827bd246
+ape
 
-# ╔═╡ b4e5b91e-86f8-4691-a502-02f3e2e94789
+# ╔═╡ 77505144-d848-4f92-94c5-e5ea2c79fc07
+ape_minus = ape .- 128
 
+# ╔═╡ 8203fe7b-a13b-428f-840b-c23bad4284ba
+ape_fdct = apply_on_sub(fDCT, ape_minus)
 
-# ╔═╡ a3c6ca6c-b503-4a98-b52c-bcae1638d19a
-#k(m::Int) = (m == 0 ? 1/sqrt(2.0) : 1.0)
+# ╔═╡ d9115c01-c6ab-4644-b3c8-4bf90b07e86f
+ape_q = apply_on_sub(x -> quantize(x, Q_table), ape_fdct)
 
-# ╔═╡ 335a251f-e285-4d24-ba4e-defb24969a41
-K_c(m::Int, n::Int) = sqrt(2/N) * k(m) * cos( m * (n + 0.5) * π / N)
+# ╔═╡ 7dc3fffc-d496-45c9-8b8c-7b4234f87447
+ape_huff = apply_on_sub(huffman, ape_q); # == ape_q
 
-# ╔═╡ 36a275f0-4ef1-4671-a803-58ad3041dcc9
-iK_c(m::Int, n::Int) = sqrt(2/N) * k(n) * cos( (m + 0.5) * n * π / N)
+# ╔═╡ f2510015-1e19-4ddb-842a-1eb429a01fda
+#save to disk
 
-# ╔═╡ df3384ac-5c5a-4e94-9a11-25d19c4056cc
-M = [K_c(i, j) for i=0:7, j=0:7]
+# ╔═╡ a92dcb63-1811-4156-923d-f66e7a2d1f37
+#load from disk
 
-# ╔═╡ 679387b9-bb42-4463-bdc8-f152ff586746
-iM = [iK_c(i, j) for i=0:7, j=0:7]
+# ╔═╡ e1e0ca42-4556-4fa4-a3e2-475ae23be2cf
+ape_dehuff = apply_on_sub(dehuffman, ape_huff); # == ape_q still
 
-# ╔═╡ b950836e-3c5f-4eb7-b7f9-c9d0d593dad8
-#unitvector(p::Int) = [Int(u == p) for u=0:7]
+# ╔═╡ bfcefce3-5c1c-4827-bf9f-dff9c191696b
+ape_dq = apply_on_sub(x -> dequantize(x, Q_table), ape_dehuff)
 
-# ╔═╡ 80175ae5-0c49-4823-9d9f-6986376c620b
-plot([discreteplot(iM * unitvector(p)) for p=0:7]...)
+# ╔═╡ 82a30cb2-5baf-4a52-a560-600169fe1e93
+ape_idct = apply_on_sub(idct, ape_dq)
 
-# ╔═╡ 35bf23fc-caac-43fb-a67c-a4a962e4c3cf
-plot([discreteplot(unitvector(p)) for p=0:7]...)
+# ╔═╡ ee4a064f-4427-49c5-a504-4e4b32049398
+ape_reconstructed = round.(Int, ape_idct .+ 128)
 
-# ╔═╡ 7ae5b1eb-1279-4a64-87c4-9b2052a7eb35
+# ╔═╡ 4b6ca085-454d-4021-be20-410201593886
+showimage(ape_reconstructed)
 
-
-# ╔═╡ d5feba51-64c7-4dfd-97b5-283be7e969dc
-md"""
-### DCT
-Vanaf hier is alles test-onzin
-
-
-``\LaTeX`` test: Here's some inline maths: ``\sqrt[n]{1 + x + x^2 + \ldots}``.
-
-Here's an equation:
-
-``\frac{n!}{k!(n - k)!} = \binom{n}{k}``
-
-This is the binomial coefficient.
-"""
+# ╔═╡ 2d8bf94e-5109-41fb-9ac0-922efd21829a
+md"Now try multiplying `Q_table` to increase or decrease the compression rate. Don't forget to do so during both quantization and dequantization"
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
-Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -1315,7 +1730,6 @@ TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
 [compat]
 FFTW = "~1.4.3"
 Images = "~0.24.1"
-Interpolations = "~0.13.4"
 Plots = "~1.20.1"
 PlutoUI = "~0.7.9"
 StaticArrays = "~1.2.12"
@@ -2720,53 +3134,87 @@ version = "0.9.1+5"
 # ╟─8ad949b2-e90a-44f6-a19b-4165b2750ba4
 # ╟─ff00db16-f8ee-4976-9619-2506b05f0d14
 # ╟─5382cc72-3d67-40d3-80d8-1ecd7959e3d8
-# ╠═148934fb-1996-424e-8b0c-3a5a4646060f
+# ╟─148934fb-1996-424e-8b0c-3a5a4646060f
 # ╟─e6105acc-5fa6-453f-9b8e-c7e31d6834b6
-# ╟─3a77a494-d17a-4bcc-b59f-4668c07e31bc
+# ╠═a09f9366-212f-422c-87b6-122a2df65e9b
+# ╠═2f8ec2f9-d898-4aed-8fa6-8da92c16ebe2
 # ╟─bb5ff4d0-854b-4297-a887-9062ad6c1a9e
-# ╠═df78b4cb-25a1-41a5-9dce-251f827bd246
-# ╟─60ef8a59-dd84-4ab6-89a5-57f5af9f73de
-# ╠═77505144-d848-4f92-94c5-e5ea2c79fc07
+# ╟─0a95216c-7067-41f9-bc4f-21131621dca7
+# ╠═c1a08b76-6049-49db-96f1-cfaa69ca9c99
+# ╟─ef704eb3-8822-4894-83d2-db4087a96301
+# ╠═55fc2fd1-769a-4ec4-bd24-8976198440e0
 # ╟─d57511ea-a62c-4a46-9a6a-22bf3123d76b
 # ╠═dec56ad0-58e9-456e-a75d-090865149dbb
 # ╠═0a7d25d5-340e-45be-a1be-abb1cbf6ef36
-# ╠═5e78fe3d-4c9a-4597-9ca1-b641874e5996
-# ╠═dcb663f8-5a49-420b-85ba-17b8d60febcc
-# ╠═742d65cb-3196-4ace-8e91-65cb4b208696
-# ╠═c26e53eb-cfbb-40df-8f11-67d0bb3add1f
-# ╠═45b39cd3-e104-49ca-9a88-3b0ece4edb18
-# ╠═4c6f736f-217a-46c5-87d1-3377f9daa953
-# ╠═44fb2e5e-4f95-4d08-a1c1-73cda73fca9c
-# ╠═7cb01529-b500-4729-8cab-be5985739489
-# ╠═6d120b0b-ae51-4874-ae6b-17ed42f1fecf
-# ╠═97ea5326-cbf0-4e56-92fb-e692c5867e77
-# ╠═6b5368f1-ac22-489b-a95b-d51696472e17
-# ╠═c32eaf9d-3939-40ec-a7fb-83b911387591
-# ╠═9f01b2fc-1122-449a-92c9-663c734b3eff
-# ╠═8e448fd4-6a83-48f0-9345-44322f991a49
-# ╠═d33ef724-4bb7-4be5-a9cf-14a928fb2289
-# ╠═bbc98009-e757-4936-8251-d57426b8cb9b
-# ╠═8425a6ff-b968-4245-b351-face7d874a2b
-# ╠═371b82c0-518f-4a23-8d83-9775aefdfb76
-# ╠═9da5dc21-db80-4ea1-b54d-d774bd8c94a4
-# ╠═226b6612-7f60-44c6-8452-cba9b318b1ca
-# ╟─72de7fb2-8288-4bc5-8293-eeed4016563f
-# ╠═807854a1-032f-4dd9-8e50-895b92d23322
-# ╠═4ce1ccad-36a4-41be-97e6-10fc4586cdad
-# ╠═28c4e4ce-bfac-4abd-bd1a-ce936d15c0e6
-# ╠═6ce1d16b-479f-4175-9943-fbc611dcee9c
-# ╠═de0ba933-75c6-4548-8e95-78bfba8e6d4a
-# ╠═d6ed210d-2774-4a16-8f02-2e0391dce749
-# ╠═b4e5b91e-86f8-4691-a502-02f3e2e94789
-# ╠═a3c6ca6c-b503-4a98-b52c-bcae1638d19a
-# ╠═335a251f-e285-4d24-ba4e-defb24969a41
-# ╠═36a275f0-4ef1-4671-a803-58ad3041dcc9
-# ╠═df3384ac-5c5a-4e94-9a11-25d19c4056cc
-# ╠═679387b9-bb42-4463-bdc8-f152ff586746
-# ╠═b950836e-3c5f-4eb7-b7f9-c9d0d593dad8
-# ╠═80175ae5-0c49-4823-9d9f-6986376c620b
-# ╠═35bf23fc-caac-43fb-a67c-a4a962e4c3cf
-# ╠═7ae5b1eb-1279-4a64-87c4-9b2052a7eb35
-# ╟─d5feba51-64c7-4dfd-97b5-283be7e969dc
+# ╟─30d219a6-f259-477d-b532-70ac0a0baa7e
+# ╠═13fd6c8d-ebb4-42a4-8b91-a15d750e5de7
+# ╟─fe9587bb-3683-420e-bb16-8bdb9db82fc3
+# ╠═5a2a34e8-4447-4a02-b9a5-f3edcea0a51e
+# ╟─bac76ace-6cc5-4488-9ac2-d6a91167504a
+# ╟─ff264ac0-aaeb-4992-acfa-0ebad0edf7a5
+# ╠═2f81e240-e0b5-4442-b855-0b21c5e15993
+# ╟─71503507-8270-4162-bf03-09c7edc1dd4e
+# ╠═d5a73aac-eff1-4040-a7c3-9b0f254d8391
+# ╠═4250d162-d613-457c-92d8-9733c96adb63
+# ╟─1a06a96a-6324-40de-bec1-0189bf90a543
+# ╟─b456a6a1-230f-493b-94e5-a89849ed3449
+# ╠═bb7a7573-ee76-425f-b6ec-7a5a463b9b9d
+# ╟─5ce72eab-faf7-4403-856b-675e7a2de675
+# ╠═9a07d873-a1ab-4d8d-8c13-3cf1c51ad29e
+# ╟─7fb8fddb-85d5-4b59-800b-29d0b6333b6f
+# ╠═9f01466c-94c1-4352-a449-56d06ed61fb1
+# ╟─8de75a30-40cd-4632-a52f-361ac7c3beca
+# ╠═5f82b60e-bd01-4af3-a293-8b8b96bac45d
+# ╠═69c459d0-e627-4ddb-b3c3-a4c971a8c383
+# ╟─1a92c635-f369-490e-afbf-5b38bd41cb79
+# ╠═31e59ae6-0ad5-4937-a6e3-d7efb79a4051
+# ╟─2356b679-cc2e-45cd-bb4f-8929c14d3942
+# ╠═a01926fa-fc32-44dc-9c38-00cfb27b9d38
+# ╟─6d42670a-1046-47b4-a8cb-bb8ff35f16e9
+# ╟─13cea041-fb29-455d-b5d7-72fdef4d3cbe
+# ╟─f679a00d-cb26-40e2-ac57-a9b66dd448a2
+# ╠═ee1ff74a-54a7-4952-8dce-47889df3119f
+# ╟─f3528adc-0956-41f7-b796-19d6d92c7098
+# ╠═86263d1a-a12d-45ba-b86f-7b9ad8c21dc6
+# ╠═e879c414-3d15-492a-b7d9-a903918f6f65
+# ╟─bab971b7-1bf5-4598-8dde-e68ac01a849e
+# ╠═65c94021-1109-4c6d-994f-52ef441a527f
+# ╟─7c817342-0139-4e95-831b-502b3e0d26e3
+# ╠═89f19fec-c049-4829-a991-218f58696ea9
+# ╠═f1fdb1f9-0d20-4c6a-9c0b-927d19d5405e
+# ╟─8a4b5232-1514-4bdc-903c-71f60c6a509f
+# ╠═4acb726f-e4e4-436c-8195-990407038cf4
+# ╟─1709e9d6-99f1-420c-96d8-bfa91f45935f
+# ╠═1cb0d614-6c98-48e4-9828-9cec4cbcfc80
+# ╠═0a36a17d-7e4c-4cd6-9127-4caafe37e701
+# ╠═3dd3d3ca-c880-41f7-a2e1-386d5d26f5c4
+# ╟─e8cd9018-3ca4-45c9-80ad-abba24f59092
+# ╠═5269f2a7-497f-41d4-b44d-472555d07d47
+# ╠═2614f4f5-948f-44c7-aa21-99e5770c95d9
+# ╠═a7ac9dd8-7266-464a-aa64-58e53011e386
+# ╠═12b5561c-380b-4977-9bfa-872d1724e522
+# ╠═f58c38ec-e016-4cd6-a569-0945ab5bb66a
+# ╠═516d5b58-ead5-4486-b858-dbca430afe5a
+# ╠═446ffc52-c905-4dc6-bbde-cd3d17df9211
+# ╟─1883f6ea-048d-4833-8ab2-523c66c5f2e0
+# ╠═017ef853-3b84-44b7-90d9-0111aebd0d13
+# ╠═7a2c0a9a-e403-4c8c-9acd-514a27df3500
+# ╠═06d04c0e-2e10-4589-81be-23345901fcf9
+# ╠═452cabc2-2e01-4b03-9643-24da8dcca6a3
+# ╠═4a6cc610-72aa-4286-9168-875612ff5cf4
+# ╟─84956860-b04d-4796-b70d-eb0edf95b5a1
+# ╠═df78b4cb-25a1-41a5-9dce-251f827bd246
+# ╠═77505144-d848-4f92-94c5-e5ea2c79fc07
+# ╠═8203fe7b-a13b-428f-840b-c23bad4284ba
+# ╠═d9115c01-c6ab-4644-b3c8-4bf90b07e86f
+# ╠═7dc3fffc-d496-45c9-8b8c-7b4234f87447
+# ╠═f2510015-1e19-4ddb-842a-1eb429a01fda
+# ╠═a92dcb63-1811-4156-923d-f66e7a2d1f37
+# ╠═e1e0ca42-4556-4fa4-a3e2-475ae23be2cf
+# ╠═bfcefce3-5c1c-4827-bf9f-dff9c191696b
+# ╠═82a30cb2-5baf-4a52-a560-600169fe1e93
+# ╠═ee4a064f-4427-49c5-a504-4e4b32049398
+# ╠═4b6ca085-454d-4021-be20-410201593886
+# ╟─2d8bf94e-5109-41fb-9ac0-922efd21829a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
