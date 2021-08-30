@@ -1024,19 +1024,17 @@ f(x,y) = \frac{1}{4}\sum_{u=0}^7\sum_{v=0}^7 k_u k_v F(u,v) \cos\left(\frac{(2x+
 ```
 where ``x,y = 0,1,\ldots,7``.
 
-Let's immediately implement these the `fDCT` and the `iDCT`. Keep in mind that Julia Arrays are indexed from 1 to `n`.
+Let's immediately implement these the `fDCT` and the `iDCT`. Keep in mind that Julia Arrays are indexed from 1 to ``n``.
 "
 
 # ╔═╡ a09f9366-212f-422c-87b6-122a2df65e9b
 function fDCT(f::AbstractMatrix)
-	return 1/4 * [k(u)*k(v)*sum(f[x+1, y+1] * cos( (2*x + 1)*u*π/16) * cos( (2*y + 1)*v*π/16) for x=0:7, y=0:7) for u=0:7, v=0:7]
-	#return zeros(N, N) #exercise: replace
+	return zeros(N, N) #exercise: replace
 end
 
 # ╔═╡ 2f8ec2f9-d898-4aed-8fa6-8da92c16ebe2
 function iDCT(F::AbstractMatrix)
-	return 1/4 * [sum(k(u)*k(v)*F[u+1, v+1] * cos( (2*x + 1)*u*π/16) * cos( (2*y + 1)*v*π/16) for u=0:7, v=0:7) for x=0:7, y=0:7]
-	#return zeros(N, N) #exercise: replace
+	return zeros(N, N) #exercise: replace
 end
 
 # ╔═╡ bb5ff4d0-854b-4297-a887-9062ad6c1a9e
@@ -1094,7 +1092,6 @@ md"First, let's create 2D basis functions as we did in the 1D case. For ``8\time
 function basisimage(n::Int)
 	u = zeros(N, N)
 	#exercise: complete this function
-	u[n]=1
 	return u
 end
 
@@ -1135,14 +1132,14 @@ md"Before you try the entire grid, try to visualize a single DCT basis image."
 #single image
 10 |> basisimage |> iDCT |> showmatrix
 
+#this is Julia's pipe syntax, alternatively write:
+#showmatrix(iDCT(basisimage(10)))
+
 # ╔═╡ 71503507-8270-4162-bf03-09c7edc1dd4e
 md"If that works you can try the entire grid:"
 
 # ╔═╡ d5a73aac-eff1-4040-a7c3-9b0f254d8391
-#exercise: entire grid
-
-# ╔═╡ 4250d162-d613-457c-92d8-9733c96adb63
-[showmatrix(iDCT(basisimage(8*i + j + 1))) for i=0:7, j=0:7]
+#exercise: entire grid (HINT: modify the code from the previous grid)
 
 # ╔═╡ 1a06a96a-6324-40de-bec1-0189bf90a543
 md"Let's try to use our DCT functions on an ``8\times 8`` image."
@@ -1219,12 +1216,12 @@ Let's implement our own `quantize` and `dequantize` functions. You can use `roun
 
 # ╔═╡ 86263d1a-a12d-45ba-b86f-7b9ad8c21dc6
 function quantize(F::AbstractMatrix, Q::AbstractMatrix)
-	return floor.(Int, F./Q .+ 0.5) #exercise: implement correctly
+	return F #exercise: implement correctly
 end
 
 # ╔═╡ e879c414-3d15-492a-b7d9-a903918f6f65
 function dequantize(FQ::AbstractMatrix, Q::AbstractMatrix)
-	return FQ .* Q #exercise: implement correctly
+	return FQ #exercise: implement correctly
 end
 
 # ╔═╡ bab971b7-1bf5-4598-8dde-e68ac01a849e
@@ -1232,14 +1229,14 @@ md"Instead of thresholding `F_ape_8x8` like we did earlier, let's try to quantiz
 
 # ╔═╡ 65c94021-1109-4c6d-994f-52ef441a527f
 #quantize F_ape_8x8
-F_ape_8x8_Q  = quantize(F_ape_8x8, Q_table)
+F_ape_8x8_Q  = 0
 
 # ╔═╡ 7c817342-0139-4e95-831b-502b3e0d26e3
 md"Now dequantize `F_ape_8x8_Q` and store the result in `F_ape_8x8_dQ`. Compare it to `F_ape_8x8`, the variable you are trying to compress."
 
 # ╔═╡ 89f19fec-c049-4829-a991-218f58696ea9
 #dequantize ape_8x8_Q
-F_ape_8x8_dQ = dequantize(F_ape_8x8_Q, Q_table)
+F_ape_8x8_dQ = 0
 
 # ╔═╡ f1fdb1f9-0d20-4c6a-9c0b-927d19d5405e
 F_ape_8x8
@@ -1266,9 +1263,6 @@ end
 function dehuffman(huffmantree) #decodes huffman tree and returns image
 	return huffmantree
 end
-
-# ╔═╡ 3dd3d3ca-c880-41f7-a2e1-386d5d26f5c4
-reshape(rand(64), (8,8))
 
 # ╔═╡ e8cd9018-3ca4-45c9-80ad-abba24f59092
 begin
@@ -1620,22 +1614,22 @@ end
 jpeg_test
 
 # ╔═╡ 2614f4f5-948f-44c7-aa21-99e5770c95d9
-jpeg_test_fdct = fDCT(jpeg_test .- 128)
+jpeg_test_fdct = 0
 
 # ╔═╡ a7ac9dd8-7266-464a-aa64-58e53011e386
-jpeg_test_q = quantize(jpeg_test_fdct, Q_table)
+jpeg_test_q = 0
 
 # ╔═╡ 12b5561c-380b-4977-9bfa-872d1724e522
-jpeg_test_huffman = huffman(jpeg_test_q);
+jpeg_test_huffman = 0; #keep the ; to suppress output
 
 # ╔═╡ f58c38ec-e016-4cd6-a569-0945ab5bb66a
-jpeg_test_dehuffman = dehuffman(jpeg_test_huffman);
+jpeg_test_dehuffman = 0;
 
 # ╔═╡ 516d5b58-ead5-4486-b858-dbca430afe5a
-jpeg_test_dq = dequantize(jpeg_test_dehuffman, Q_table)
+jpeg_test_dq = 0
 
 # ╔═╡ 446ffc52-c905-4dc6-bbde-cd3d17df9211
-jpeg_test_rec = iDCT(jpeg_test_dq) .+ 128
+jpeg_test_rec = 0
 
 # ╔═╡ 1883f6ea-048d-4833-8ab2-523c66c5f2e0
 md"""#### JPEG on an entire image
@@ -1658,7 +1652,7 @@ end
 # ╔═╡ 7a2c0a9a-e403-4c8c-9acd-514a27df3500
 md"To demonstrate the usage of this function, we define a test image `subimg_test`, consisting of two ``2\times 2`` blocks (instead of two ``8\times 8`` for convenience). We then define the function `sub_func`, which takes a subimage as input and outputs that subimage with the minimum of the subimage added to every entry.
 
-This means the left half will be reduced by 1, while the right half will be increased by two."
+This means the left half will be reduced by 1, while the right half will be increased by 2."
 
 # ╔═╡ 06d04c0e-2e10-4589-81be-23345901fcf9
 subimg_test = [1 -1 2 2;
@@ -1677,6 +1671,15 @@ apply_on_sub(sub_func, subimg_test, 2)
 # ╔═╡ 84956860-b04d-4796-b70d-eb0edf95b5a1
 md"We of course want to use this `apply_on_sub` function to reuse our previous functions. Let's go through a full application of the JPEG algorithm."
 
+# ╔═╡ 9be09d6f-d809-47a1-9965-5ff67a28cc20
+md"First, pick a quantization table. By default we will just copy `Q_table` from before. You are encouraged to come up with your own quantization tables or to look for some on the internet."
+
+# ╔═╡ 0ac14389-984d-41d4-aa52-6cef371cea12
+Q = copy(Q_table);
+
+# ╔═╡ 43ed78d2-05dc-449f-becc-480f2bb7e325
+md"Then we begin the algorithm as described in the summary in the previous section."
+
 # ╔═╡ df78b4cb-25a1-41a5-9dce-251f827bd246
 ape
 
@@ -1687,7 +1690,7 @@ ape_minus = ape .- 128
 ape_fdct = apply_on_sub(fDCT, ape_minus)
 
 # ╔═╡ d9115c01-c6ab-4644-b3c8-4bf90b07e86f
-ape_q = apply_on_sub(x -> quantize(x, Q_table), ape_fdct)
+ape_q = apply_on_sub(x -> quantize(x, Q), ape_fdct)
 
 # ╔═╡ 7dc3fffc-d496-45c9-8b8c-7b4234f87447
 ape_huff = apply_on_sub(huffman, ape_q); # == ape_q
@@ -1702,7 +1705,7 @@ ape_huff = apply_on_sub(huffman, ape_q); # == ape_q
 ape_dehuff = apply_on_sub(dehuffman, ape_huff); # == ape_q still
 
 # ╔═╡ bfcefce3-5c1c-4827-bf9f-dff9c191696b
-ape_dq = apply_on_sub(x -> dequantize(x, Q_table), ape_dehuff)
+ape_dq = apply_on_sub(x -> dequantize(x, Q), ape_dehuff)
 
 # ╔═╡ 82a30cb2-5baf-4a52-a560-600169fe1e93
 ape_idct = apply_on_sub(idct, ape_dq)
@@ -1714,7 +1717,7 @@ ape_reconstructed = round.(Int, ape_idct .+ 128)
 showimage(ape_reconstructed)
 
 # ╔═╡ 2d8bf94e-5109-41fb-9ac0-922efd21829a
-md"Now try multiplying `Q_table` to increase or decrease the compression rate. Don't forget to do so during both quantization and dequantization"
+md"Now try multiplying `Q_table` to increase or decrease the compression rate."
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -3155,7 +3158,6 @@ version = "0.9.1+5"
 # ╠═2f81e240-e0b5-4442-b855-0b21c5e15993
 # ╟─71503507-8270-4162-bf03-09c7edc1dd4e
 # ╠═d5a73aac-eff1-4040-a7c3-9b0f254d8391
-# ╠═4250d162-d613-457c-92d8-9733c96adb63
 # ╟─1a06a96a-6324-40de-bec1-0189bf90a543
 # ╟─b456a6a1-230f-493b-94e5-a89849ed3449
 # ╠═bb7a7573-ee76-425f-b6ec-7a5a463b9b9d
@@ -3187,7 +3189,6 @@ version = "0.9.1+5"
 # ╟─1709e9d6-99f1-420c-96d8-bfa91f45935f
 # ╠═1cb0d614-6c98-48e4-9828-9cec4cbcfc80
 # ╠═0a36a17d-7e4c-4cd6-9127-4caafe37e701
-# ╠═3dd3d3ca-c880-41f7-a2e1-386d5d26f5c4
 # ╟─e8cd9018-3ca4-45c9-80ad-abba24f59092
 # ╠═5269f2a7-497f-41d4-b44d-472555d07d47
 # ╠═2614f4f5-948f-44c7-aa21-99e5770c95d9
@@ -3197,12 +3198,15 @@ version = "0.9.1+5"
 # ╠═516d5b58-ead5-4486-b858-dbca430afe5a
 # ╠═446ffc52-c905-4dc6-bbde-cd3d17df9211
 # ╟─1883f6ea-048d-4833-8ab2-523c66c5f2e0
-# ╠═017ef853-3b84-44b7-90d9-0111aebd0d13
-# ╠═7a2c0a9a-e403-4c8c-9acd-514a27df3500
+# ╟─017ef853-3b84-44b7-90d9-0111aebd0d13
+# ╟─7a2c0a9a-e403-4c8c-9acd-514a27df3500
 # ╠═06d04c0e-2e10-4589-81be-23345901fcf9
 # ╠═452cabc2-2e01-4b03-9643-24da8dcca6a3
 # ╠═4a6cc610-72aa-4286-9168-875612ff5cf4
 # ╟─84956860-b04d-4796-b70d-eb0edf95b5a1
+# ╟─9be09d6f-d809-47a1-9965-5ff67a28cc20
+# ╠═0ac14389-984d-41d4-aa52-6cef371cea12
+# ╟─43ed78d2-05dc-449f-becc-480f2bb7e325
 # ╠═df78b4cb-25a1-41a5-9dce-251f827bd246
 # ╠═77505144-d848-4f92-94c5-e5ea2c79fc07
 # ╠═8203fe7b-a13b-428f-840b-c23bad4284ba
