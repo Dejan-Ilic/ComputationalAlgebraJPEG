@@ -607,12 +607,13 @@ md"""Now that we understand the basics of Julia syntax, we can manipulate some i
 
 # ╔═╡ fd056009-de33-460a-8475-8e93d6e02d46
 md"""
-## Images
-### Image representation
+## Image representation
 """
 
 # ╔═╡ ea1994ed-a14e-4df9-b008-9eeefe69a831
-md"""Let's load our test image for today"""
+md"""Throughout this course, code is often hidden when only the output is important to the reader. The interested reader is invited to examine the hidden code outside of class.
+
+Let's load our test image for today"""
 
 # ╔═╡ 4f6c5da3-3d86-46d9-8e4d-c3f254fbd90e
 mandrill = testimage("mandrill")
@@ -623,8 +624,14 @@ md"""In Julia, images are 2D matrices of RGB objects. To see the underlying 3 x 
 Its output can be interpreted as 3 _pages_ of size $(size(mandrill,1)) x $(size(mandrill,2)). Note that pixels have values between 0 (black) and 1 (white). In MATLAB, depending on the data type (integer resp. float) intensity values range between 0 and 255, resp. 0 and 1. In Julia they always range between 0 and 1 because integer intensities `i` are interpreted as `i/255`.
 """
 
+# ╔═╡ 42bc98e0-14cd-4a9c-8c21-dd2c87273358
+channelview(mandrill)[1, :, :], channelview(mandrill)[2, :, :], channelview(mandrill)[3, :, :]
+
+# ╔═╡ 8a1a4d61-0619-41b7-b980-7099cfb779d0
+md"Multiplying the matrices with 255 (and casting them to the `Int` type) results in a more traditional representation of the image"
+
 # ╔═╡ 2e96aab5-fc7a-4f2a-a2b4-ed27a9b7004b
-channelview(mandrill)[1, :, :], channelview(mandrill)[2, :, :],  channelview(mandrill)[3, :, :]
+Int.(255*channelview(mandrill)[1, :, :]), Int.(255*channelview(mandrill)[2, :, :]),  Int.(255*channelview(mandrill)[3, :, :])
 
 # ╔═╡ 5e359f41-d768-4cd7-afd6-5b98806ed9a4
 md"""Let's tear the pages apart and store them in regular 2D matrices `R`, `G` and `B`."""
@@ -637,7 +644,7 @@ begin
 end #output will only show B
 
 # ╔═╡ 84c7d5f7-2ecc-414e-89b3-1a746c583eee
-md"""Using some library functions, we can stack the R matrix on top of 2 zero arrays, which dims out the G and B channel. We do the same with the G and B channel (don't worry about code)."""
+md"""Using some library functions, we can stack the R matrix on top of 2 zero arrays, which dims out the G and B channel. We do the same with the G and B channel."""
 
 # ╔═╡ 3ba49ed0-86f8-44d7-ad8c-919e18e39b3b
 hcat(colorview(RGB, StackedView(R, zeroarray, zeroarray)), colorview(RGB, StackedView(zeroarray, G, zeroarray)), colorview(RGB, StackedView(zeroarray, zeroarray, B)))
@@ -659,7 +666,7 @@ colorview(RGB, R_intensity * R, G_intensity * G, B_intensity * B)
 md"""Being mathematicians (or computer scientists? can they also take this course?) we of course immediately realize that an RGB image is just a stack of 3 grayscale images! This means we can develop our compression techniques on a single channel."""
 
 # ╔═╡ e031b0fd-acc6-4552-93b5-ba6208848c6e
-ape = Gray.(mandrill) #julia vectorize syntax
+mandrill_gray = Gray.(mandrill) #julia vectorize syntax
 
 # ╔═╡ b8e78721-fab9-4e10-bcd4-a3e2fed3e4d6
 md"""**Remark:** the ``RGB`` *color space* is just one way to store color coordinates. If you think of RGB as analogous to Cartesian coordinates, then there also exist color space which are analogous to polar coordinates. 
@@ -677,10 +684,10 @@ mandrill_HSI = convert.(HSI, mandrill);
 # ╔═╡ e596f8c0-a7e7-4e92-99a8-3da11620aeab
 md"
 Control `S` in `HUE` image:
-$(@bind HUE_s Slider(LinRange(0,1,100)))
+$(@bind HUE_s Slider(LinRange(0,1,100), 100, true))
 
 Control `H` in `SAT` image: $(@bind SAT_s Slider(0:360))
-Control `I` in `SAT` image: $(@bind SAT_i Slider(LinRange(0,1,100)))
+Control `I` in `SAT` image: $(@bind SAT_i Slider(LinRange(0,1,100), 100, true))
 
 "
 
@@ -704,36 +711,369 @@ md"**Exercise:** try to make sliders that modify values `α`, `β` and `γ`. The
 
 in the next cell. Experiment with different ranges."
 
-# ╔═╡ bb5ff4d0-854b-4297-a887-9062ad6c1a9e
+# ╔═╡ 460378ab-1322-4ce5-9b01-9d9c06144ab7
+#code for sliders
+
+# ╔═╡ c8f59286-8f23-49b4-805a-810cc109ef17
+#code for displaying images
+
+# ╔═╡ 7098bf12-c1b7-4f7b-bd3d-84fffe281b97
+md"## JPEG algorithm
+### Overview"
+
+# ╔═╡ b9c5dbc2-780f-4fc6-aaeb-cb88dbd7de11
+md"The JPEG *encoding* algorithm consists of the following steps:
+1. Forward Discrete Cosine Transform (FDCT)
+2. Quantization
+3. Huffman Encoding
+
+The JPEG *decoding* algorithm follows those steps in the opposite direction
+1. Huffman Decoding
+2. Dequantization
+3. Inverse Discrete Cosine Transform (IDCT)"
+
+# ╔═╡ 74721d26-66c3-44dc-a5a3-8cb8d0cb6f37
+md"### Discrete cosine transform
+#### Fourier cosine transform
+Repeat that the Fourier transform of a function ``x(t) : \mathbb{R} \to \mathbb{R}`` is given by
+
+```math
+\mathcal{F}(x(t))(\omega) = X(\omega) = \left(\frac{1}{2\pi}\right)^{1/2} \int_{-\infty}^{+\infty} x(t) e^{-i\omega t} \mathrm{d}t
+```
+and its inverse
 
 
-# ╔═╡ df78b4cb-25a1-41a5-9dce-251f827bd246
+```math
+\mathcal{F}^{-1}(X(\omega))(t) = x(t) = \left(\frac{1}{2\pi}\right)^{1/2} \int_{-\infty}^{+\infty} X(\omega) e^{i\omega t} \mathrm{d}\omega
+```
 
+To derive the DCT, we first derive the (continuous) Fourier cosine transform. Let ``x: \mathbb{R}^+\to \mathbb{R}`` and define
 
-# ╔═╡ d5feba51-64c7-4dfd-97b5-283be7e969dc
+```math
+y: \mathbb{R} \to \mathbb{R}: t\mapsto \left\{\begin{array}{ll} x(t) &\text{if } 0 \leq t\\ x(-t) &\text{if } t < 0\end{array}\right.
+```
+
+Using Euler's identity, we find that
+
+```math
+\begin{align*}
+\mathcal{F}(y)(\omega) &= \left(\frac{1}{2\pi}\right)^{1/2} \int_{-\infty}^{+\infty} y(t) e^{-i\omega t} \mathrm{d}t\\
+&=\left(\frac{1}{2\pi}\right)^{1/2} \left[\int_{-\infty}^{0} x(-t) e^{-i\omega t} \mathrm{d}t + \int_{0}^{+\infty} x(t) e^{-i\omega t} \mathrm{d}t\right]\\
+&=\left(\frac{2}{\pi}\right)^{1/2}\int_{-\infty}^{+\infty} x(t) \cos(\omega t) \mathrm{d}t
+\end{align*}
+```
+
+This leads us to the definition of the *Fourier cosine transform*
+```math
+\mathcal{F}_c(x)(\omega) = X_c(\omega) = \left(\frac{2}{\pi}\right)^{1/2}\int_0^\infty x(t) \cos(\omega t) \mathrm{d}t
+```
+Also note that ``\mathcal{F}_c^{-1} = \mathcal{F}_c``.
+
+"
+
+# ╔═╡ 8876bdc8-2412-4879-a676-1dd9a49e8638
+md"#### The discrete cosine transform
+The integral that defines the Fourier cosine transform multiplies ``x(t)`` with the kernel ``K_c(\omega, t) = \cos(\omega t)``.
+
+We discretize this kernel by chosing intervals ``\Delta t, \Delta f > 0`` such that ``\Delta t \Delta f = N \in \mathbb{N}``. Next, we define ``\omega_m = 2\pi m\Delta f`` and ``t_n = n\Delta t`` where ``m, n = 0, 1,\ldots, N``.
+
+The discrete kernel is thus given by
+```math
+\begin{align*}
+K_c(m, n) &= K_c(\omega_m, t_n)\\
+&= \cos(2\pi m\Delta f \cdot n\Delta t)\\
+&= \cos\left(\frac{\pi m n}{N}\right)
+\end{align*}
+```
+
+This is an ``(N+1)\times (N+1)`` matrix ``[M]_{m,n} = K_c(m,n)`` where again ``m, n = 0, 1,\ldots, N``.
+
+That means our discretized integral, which we call the DCT, can be written as a matrix multiplication
+
+```math
+\underline{X} = M\underline{x}, \qquad \underline{x} \in \mathbb{R}^{N+1}
+```
+such that for ``m = 0, \ldots, N`` it holds that
+```math
+X_m = \sum_{n=0}^N x_n K_c(m,n) = \sum_{n=0}^N x_n\cos\left(\frac{\pi m n}{N}\right)
+```
+
+It can be shown that the inverse of ``M``, i.e. the inverse DCT, is equal to the transpose of ``M``.
+"
+
+# ╔═╡ 07c695be-89c9-492b-a714-4c89fce9b760
 md"""
-### DCT
-Vanaf hier is alles test-onzin
+The JPEG standard however uses a different DCT pair, namely DCT-II and DCT-III. DCT-II is called the *forward* DCT and DCT-III is called the *inverse* DCT. 
+
+DCT-II:
+```math
+[C_N^{II}]_{m,n} = \sqrt{\frac{2}{N}} k_m \cos\left(\frac{m\left(n+\frac{1}{2}\right)\pi}{N}\right)
+```
+DCT-III:
+```math
+[C_N^{III}]_{m,n} = \sqrt{\frac{2}{N}} k_n \cos\left(\frac{\left(m+\frac{1}{2}\right)n\pi}{N}\right)
+```
+
+where this time ``m = 0, 1, \ldots, N-1`` and 
+```math
+k_m = \left\{\begin{array}{lLl}
+\frac{1}{\sqrt{2}} & \text{if }& m = 0\\
+1 & \text{if }& m = 1, 2, \ldots, N-1
+\end{array}\right.
+```
+
+A sketch of the proof that they are each other's inverses will be given in a subsequent section."""
+
+# ╔═╡ 423360f8-8e0f-4495-bcc8-de1e84709ca6
+md"#### Implementing the DCT
+As a warm-up to the 2D-DCT, first we will implement the 1D DCT. Let ``N = 8`` and change the `unitvector` function such that it returns a unit vector with a 1 on the ``k``th entry and 0 elsewhere."
+
+# ╔═╡ a88ab303-225e-4bdc-8101-69dc6a204ebc
+const N = 8
+
+# ╔═╡ 1b6f7894-d7ff-42e3-85c7-da52d561a680
+function unitvector(k::Int)
+	v = zeros(N)
+	v[k] = 1.0
+	#exercise: return vector of size N with entry k = 1, entry != k = 0
+	
+	return v
+end
+
+# ╔═╡ c72da624-f8d7-4c12-b9f8-0485c7b27c09
+begin
+	function discreteplot(f::AbstractArray)
+		N = length(f)
+		x = [floor(i/3) for i=0:3*N-1]
+		f2 = [let rem = i%3; if rem==0 0 elseif rem==1 f[1 + (i-1)÷3] else NaN end end for i=0:3*N-1]
+
+		plot(x,f2, line=2, framestyle=:origin, linecolor=:blue, label=nothing, xticks=nothing)
+		scatter!(0:N-1, f, color=:blue,     markerstrokewidth = 0, label=nothing, xticks=nothing)
+	end
+	md"The next cell uses the provided function `discreteplot(::Vector)` to plot the unit vectors you just defined. This allows you to verify your implementation."
+end
+
+# ╔═╡ 6bfca45d-3c4e-4389-a370-f71afcac208b
+plot([discreteplot(unitvector(k)) for k=1:N]...)
+
+# ╔═╡ d486cce7-275d-43d0-b27b-81ab27465314
+md"Next, we will implement the DCT functions. Although these are just matrix multiplications, wrapping them inside a function provides additional clarity. 
+
+First, define the value ``k_m`` from the DCT equations as a function:"
+
+# ╔═╡ c852ed69-1fd7-45a7-9950-903631c21e16
+function k(m::Int)
+	#implement this function correctly
+	if m == 0
+		return 1/sqrt(2)
+	else
+		return 1
+	end
+	return 0
+end
+
+# ╔═╡ efb1196c-7724-4326-8874-db0cf14b99ff
+md"Next, use this `k` function to define the matrices:"
+
+# ╔═╡ fc9f2534-c2dd-4227-b38d-e255587ce633
+DCT_II_Matrix = [sqrt(2/N)*k(m)*cos( (m*(n+0.5)*π) / N ) for m=0:N-1, n=0:N-1]
+
+# ╔═╡ 3ef6afbe-ed53-4353-8c2a-38e500c5e98e
+DCT_III_Matrix = [sqrt(2/N)*k(n)*cos( ((m+0.5)*n*π) / N ) for m=0:N-1, n=0:N-1]
+
+# ╔═╡ f174f359-4e4d-4bab-90fd-4c052ffafb45
+md"For clarity, the matrices are given multiplication-wrappers in the form of the following functions:"
+
+# ╔═╡ 497017ed-0b22-440e-b96f-23f860096a94
+DCT_II(x::Vector) = DCT_II_Matrix * x
+
+# ╔═╡ 7ec184e2-2edd-4876-a5b5-99bfaf3231b9
+DCT_III(X::Vector) = DCT_III_Matrix * X
+
+# ╔═╡ a6efa895-cc01-415e-a498-76a013eb39dd
+md"Let's test the implementation of our DCT functions on some unit vector. `DCT_III(DCT_II(u))` should be again equal to `u`."
+
+# ╔═╡ 61fa4793-654b-4640-b9d2-2d9d1aaf2e77
+begin
+	function clean_round(v::AbstractVector)
+		[let r = round(Int, vi);
+			abs(r - vi) < 1e-14 ? r : vi
+		 end for vi in v]
+	end
+	
+	md"The result of the previous cell might look hard to interpret due to machines precision errors like `6.93889e-18`. To make the result easier to interpret, this notebook provides the utility function `clean_round(::Vector)`. Try using it on the result of the above cell."
+end
+
+# ╔═╡ 6273e361-bc33-46ac-a890-04c96bb009d1
+DCT_III(DCT_II(unitvector(3))) |> clean_round
+
+# ╔═╡ e41ba4f3-7411-4fde-83da-e3444402e95a
+md"Using the DCT function(s), modify the code that plotted the unit vectors to show the basis vectors of the DCT"
+
+# ╔═╡ fdc75ff3-b0ca-428f-9d99-dd8a49d4b126
+#exercise
+plot([discreteplot(DCT_III(unitvector(k))) for k=1:N]...)
+
+# ╔═╡ b1e13438-2afe-43e1-ac35-23812f06a2c7
+md"Next, we will demonstrate how to use the DCT to achieve compression. First, we generate a random vector of length ``N = 8`` and plot it using the `discreteplot` function."
+
+# ╔═╡ c488d92d-86cc-49db-93e7-b17455710367
+y = rand(N)
+
+# ╔═╡ 895ef22d-7090-47cd-a2a7-977296546b27
+discreteplot(y)
+
+# ╔═╡ d47e0bc8-5d0a-44f0-8056-e83e32a4c691
+md"Next, we use the forward DCT, i.e. ``DCT-II`` to transform the function to the DCT domain. Then we plot it."
+
+# ╔═╡ fbb5eb67-5f84-4780-a3a2-40655234b424
+z = DCT_II(y)
+
+# ╔═╡ e89cdd11-d0f6-4214-bf9c-91427424ab08
+discreteplot(z)
+
+# ╔═╡ dd946660-e72c-439d-9aa1-e81af81c10dd
+md"On the above plot, some coefficients will have much smaller magnitude compared to others. To achieve compression, we can set the smallest entries of `z` to zero. Modify the code below to your specific case."
+
+# ╔═╡ 7c777379-5e50-4f68-a00c-b19b81543298
+z_compressed = let
+	a = copy(z)
+	a[6] = a[3] = a[4] = a[5] = 0 #modify this, leave the other lines
+	a
+end
+
+# ╔═╡ cdbf7a05-8e90-42bb-81b8-97596f885ae6
+md"The next cell plots `z` next to the `z_compressed` where you set the smallest entries to zero manually."
+
+# ╔═╡ 7f67164f-1a12-438c-b802-4efef9a97717
+plot(discreteplot(z), discreteplot(z_compressed))
+
+# ╔═╡ ab2d3a8e-55c4-480f-aa0c-5bc1656e9bd7
+md"Finally, modify the code in the next cell so that it displays the original signal `y` to the signal reconstructed from `z_compressed`."
+
+# ╔═╡ cf0dfcec-57ea-4a7b-919d-282ac1a721cf
+plot(discreteplot(y), discreteplot( DCT_III(z_compressed) )) #replace the zeros
+
+# ╔═╡ 8ad949b2-e90a-44f6-a19b-4165b2750ba4
+md"#### Showing that DCT-II and DCT-III are each other's inverses
+To show this result, we follow exercise 13.6 from *Computer Algebra*. Here we'll only give a sketch of the proof.
+
+**Exercise 13.6**: let ``f: \{0,1,\ldots,n-1\}\to\mathbb{R}`` be a discrete signal with period ``n``. Define
+
+```math
+g: \mathbb{Z}\to\mathbb{R}: \left\{ \begin{array}{ll}
+g(2j) = 0 & \text{for } j \in \{0,1,\ldots, 2n-1\}\\
+g(2j+1) = g(4n - 2j -1) = f(j) &\text{for } j\in \{0,1,\ldots, n-1\}
+\end{array}\right.
+```
+
+Now show the following properties:
+
+1) Show that the DFT of ``g``, ``\widehat{g}``, is a ``\mathbb{R}``-valued function with
+    1) ``4n``-periodicity
+
+    2) ``\widehat{g}(k) = \widehat{g}(4n-k) = -\widehat{g}(2n+k) = -\widehat{g}(2n-k)``
+
+2) Show that ``\forall j \in \{0,1,\ldots, n-1\}``
+
+```math
+f(j) = g(2j + 1) = \frac{1}{n}\left(\frac{\widehat{g}(0)}{2} + \sum_{k=1}^{n-1}\widehat{g}(k)\cos\left(\frac{\pi k (2j + 1)}{2n}\right)\right)
+```
+
+3) Conclude that DCT-II and DCT-III are each other's inverses.
+
+"
 
 
-``\LaTeX`` test: Here's some inline maths: ``\sqrt[n]{1 + x + x^2 + \ldots}``.
+# ╔═╡ ff00db16-f8ee-4976-9619-2506b05f0d14
+md"**Solution 13.6 (1)**:
+The ``4n``-periodicity follows from the equation
+```math
+\begin{align*}
+\widehat{g}(k) &= \sum^{4n - 1}_{j=0} g(j) \exp\left(\frac{-2\pi ijk}{4n}\right)\\
+&= \ldots\\
+&= 2\sum_{j=0}^{n-1} f(j) \cos\left(\frac{\pi k(2j + 1)}{2n}\right)
+\end{align*}
+```
+The other properties follow too from the previous equation and from special properties of the cosine function.
 
-Here's an equation:
+"
 
-``\frac{n!}{k!(n - k)!} = \binom{n}{k}``
+# ╔═╡ 5382cc72-3d67-40d3-80d8-1ecd7959e3d8
+md"**Solution 13.6 (2)**:
+Set ``\omega = \exp\left(\frac{2\pi i}{4n}\right)``, then
+```math
+\begin{align*}
+4nf(j) &= 4ng(2j+1)\\
+&= \ldots \\
+&= \sum_{k=0}^{4n-1} \widehat{g}(k)\omega^{(2j+1)k}\\
+&= \ldots \\
+&= 2\widehat{g}(0) + 4 \sum_{k=1}^{n-1} \widehat{g}(k)\cos\left(\frac{2\pi k(2j+1)}{4n}\right)
+\end{align*}
+```
 
-This is the binomial coefficient.
-"""
+"
+
+# ╔═╡ 148934fb-1996-424e-8b0c-3a5a4646060f
+md"#### 2D DCT
+
+
+
+
+"
 
 # ╔═╡ e6105acc-5fa6-453f-9b8e-c7e31d6834b6
 md"``2\times 2`` images can be constructed from the *standard* basis
 ```math
-\left\{ \left[\begin{array}{cc} 1 & 0\\ 0&0\end{array}\right], \left[\begin{array}{cc} 0 & 1\\ 0&0\end{array}\right],\left[\begin{array}{cc} 0 & 0\\ 1&0\end{array}\right],\left[\begin{array}{cc} 0 & 1\\ 0&0\end{array}\right] \right\}
+\left\{ \left[\begin{array}{cc} 1 & 0\\ 0&0\end{array}\right], \left[\begin{array}{cc} 0 & 1\\ 0&0\end{array}\right],\left[\begin{array}{cc} 0 & 0\\ 1&0\end{array}\right],\left[\begin{array}{cc} 0 & 0\\ 0&1\end{array}\right] \right\}
 ```
 "
 
 # ╔═╡ 3a77a494-d17a-4bcc-b59f-4668c07e31bc
 md"Now use a list comprehension to define the standard basis for ``8\times 8`` image patches."
+
+# ╔═╡ bb5ff4d0-854b-4297-a887-9062ad6c1a9e
+begin
+	function showimage(img::AbstractMatrix{<:Integer})
+		return Gray.( img ./ 255)
+	end
+	
+	function showmatrix(matr::AbstractMatrix)
+		m = minimum(matr)
+		M = maximum(matr)
+		
+		return @. Gray( (matr - m) / (M - m) )
+	end
+	
+	uint8(x::Gray{N0f8})::UInt8 = reinterpret(UInt8, gray(x))
+	
+	int(x::Gray{N0f8})::Int = convert(Int, uint8(x))
+	
+	ape = int.(mandrill_gray)
+	
+md"""**Remark:** During this session you will have to write some code. This cell  defines some convenience functions and variables behind the scenes.
+	
+The first one is the variable `ape`, which contains the gray mandrill picture, in traditional 0-255 format:
+"""
+end
+
+# ╔═╡ df78b4cb-25a1-41a5-9dce-251f827bd246
+ape
+
+# ╔═╡ 60ef8a59-dd84-4ab6-89a5-57f5af9f73de
+md"Next, we have the `showimage` function which can be used to show (slices of) images such as `ape`:"
+
+# ╔═╡ 77505144-d848-4f92-94c5-e5ea2c79fc07
+showimage(ape[100:300, 100:400])
+
+# ╔═╡ d57511ea-a62c-4a46-9a6a-22bf3123d76b
+md"And finally the `showmatrix` function which rescales *arbitrary* matrices to a displayable range. Take for example a `` 4\times 4`` `randn` matrix, which has values ranging from e.g. -3 to +3 (depending on randomness of course):"
+
+# ╔═╡ dec56ad0-58e9-456e-a75d-090865149dbb
+randn_test = randn(4,4)
+
+# ╔═╡ 0a7d25d5-340e-45be-a1be-abb1cbf6ef36
+showmatrix(randn_test)
 
 # ╔═╡ 5e78fe3d-4c9a-4597-9ca1-b641874e5996
 #make a 8x8 base image generating function
@@ -920,6 +1260,51 @@ function u(α)
 	return π * α
 end 
 
+# ╔═╡ b4e5b91e-86f8-4691-a502-02f3e2e94789
+
+
+# ╔═╡ a3c6ca6c-b503-4a98-b52c-bcae1638d19a
+#k(m::Int) = (m == 0 ? 1/sqrt(2.0) : 1.0)
+
+# ╔═╡ 335a251f-e285-4d24-ba4e-defb24969a41
+K_c(m::Int, n::Int) = sqrt(2/N) * k(m) * cos( m * (n + 0.5) * π / N)
+
+# ╔═╡ 36a275f0-4ef1-4671-a803-58ad3041dcc9
+iK_c(m::Int, n::Int) = sqrt(2/N) * k(n) * cos( (m + 0.5) * n * π / N)
+
+# ╔═╡ df3384ac-5c5a-4e94-9a11-25d19c4056cc
+M = [K_c(i, j) for i=0:7, j=0:7]
+
+# ╔═╡ 679387b9-bb42-4463-bdc8-f152ff586746
+iM = [iK_c(i, j) for i=0:7, j=0:7]
+
+# ╔═╡ b950836e-3c5f-4eb7-b7f9-c9d0d593dad8
+#unitvector(p::Int) = [Int(u == p) for u=0:7]
+
+# ╔═╡ 80175ae5-0c49-4823-9d9f-6986376c620b
+plot([discreteplot(iM * unitvector(p)) for p=0:7]...)
+
+# ╔═╡ 35bf23fc-caac-43fb-a67c-a4a962e4c3cf
+plot([discreteplot(unitvector(p)) for p=0:7]...)
+
+# ╔═╡ 7ae5b1eb-1279-4a64-87c4-9b2052a7eb35
+
+
+# ╔═╡ d5feba51-64c7-4dfd-97b5-283be7e969dc
+md"""
+### DCT
+Vanaf hier is alles test-onzin
+
+
+``\LaTeX`` test: Here's some inline maths: ``\sqrt[n]{1 + x + x^2 + \ldots}``.
+
+Here's an equation:
+
+``\frac{n!}{k!(n - k)!} = \binom{n}{k}``
+
+This is the binomial coefficient.
+"""
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -1023,9 +1408,9 @@ version = "3.14.0"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "024fe24d83e4a5bf5fc80501a314ce0d1aa35597"
+git-tree-sha1 = "32a2b8af383f11cbb65803883837a149d10dfe8a"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.11.0"
+version = "0.10.12"
 
 [[ColorVectorSpace]]
 deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "SpecialFunctions", "Statistics", "TensorCore"]
@@ -1219,9 +1604,9 @@ version = "0.58.1+0"
 
 [[GeometryBasics]]
 deps = ["EarCut_jll", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
-git-tree-sha1 = "58bcdf5ebc057b085e58d95c138725628dd7453c"
+git-tree-sha1 = "15ff9a14b9e1218958d3530cc288cf31465d9ae2"
 uuid = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
-version = "0.4.1"
+version = "0.3.13"
 
 [[Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -2285,11 +2670,13 @@ version = "0.9.1+5"
 # ╟─ea1994ed-a14e-4df9-b008-9eeefe69a831
 # ╠═4f6c5da3-3d86-46d9-8e4d-c3f254fbd90e
 # ╟─644db8e8-9c18-4ea5-be45-17935b807ad9
-# ╠═2e96aab5-fc7a-4f2a-a2b4-ed27a9b7004b
+# ╟─42bc98e0-14cd-4a9c-8c21-dd2c87273358
+# ╟─8a1a4d61-0619-41b7-b980-7099cfb779d0
+# ╟─2e96aab5-fc7a-4f2a-a2b4-ed27a9b7004b
 # ╟─5e359f41-d768-4cd7-afd6-5b98806ed9a4
 # ╠═1ce58807-094b-4576-8fd4-9281ec8bf90d
 # ╟─84c7d5f7-2ecc-414e-89b3-1a746c583eee
-# ╠═3ba49ed0-86f8-44d7-ad8c-919e18e39b3b
+# ╟─3ba49ed0-86f8-44d7-ad8c-919e18e39b3b
 # ╟─d043cadb-d0ac-4570-a669-56b4718a62ec
 # ╟─34e2cee3-583c-4f30-bef7-676d30b76935
 # ╟─892d5edb-f572-41f4-b328-4dc0a0adf8ed
@@ -2299,11 +2686,56 @@ version = "0.9.1+5"
 # ╟─e596f8c0-a7e7-4e92-99a8-3da11620aeab
 # ╟─f976fa97-08c9-4a87-90fd-3d757359a53b
 # ╟─c81c323f-3137-46e3-8b54-445a440f1cf9
-# ╠═bb5ff4d0-854b-4297-a887-9062ad6c1a9e
-# ╠═df78b4cb-25a1-41a5-9dce-251f827bd246
-# ╟─d5feba51-64c7-4dfd-97b5-283be7e969dc
+# ╠═460378ab-1322-4ce5-9b01-9d9c06144ab7
+# ╠═c8f59286-8f23-49b4-805a-810cc109ef17
+# ╟─7098bf12-c1b7-4f7b-bd3d-84fffe281b97
+# ╟─b9c5dbc2-780f-4fc6-aaeb-cb88dbd7de11
+# ╟─74721d26-66c3-44dc-a5a3-8cb8d0cb6f37
+# ╟─8876bdc8-2412-4879-a676-1dd9a49e8638
+# ╟─07c695be-89c9-492b-a714-4c89fce9b760
+# ╟─423360f8-8e0f-4495-bcc8-de1e84709ca6
+# ╠═a88ab303-225e-4bdc-8101-69dc6a204ebc
+# ╠═1b6f7894-d7ff-42e3-85c7-da52d561a680
+# ╟─c72da624-f8d7-4c12-b9f8-0485c7b27c09
+# ╠═6bfca45d-3c4e-4389-a370-f71afcac208b
+# ╟─d486cce7-275d-43d0-b27b-81ab27465314
+# ╠═c852ed69-1fd7-45a7-9950-903631c21e16
+# ╟─efb1196c-7724-4326-8874-db0cf14b99ff
+# ╠═fc9f2534-c2dd-4227-b38d-e255587ce633
+# ╠═3ef6afbe-ed53-4353-8c2a-38e500c5e98e
+# ╟─f174f359-4e4d-4bab-90fd-4c052ffafb45
+# ╠═497017ed-0b22-440e-b96f-23f860096a94
+# ╠═7ec184e2-2edd-4876-a5b5-99bfaf3231b9
+# ╟─a6efa895-cc01-415e-a498-76a013eb39dd
+# ╠═6273e361-bc33-46ac-a890-04c96bb009d1
+# ╟─61fa4793-654b-4640-b9d2-2d9d1aaf2e77
+# ╟─e41ba4f3-7411-4fde-83da-e3444402e95a
+# ╠═fdc75ff3-b0ca-428f-9d99-dd8a49d4b126
+# ╟─b1e13438-2afe-43e1-ac35-23812f06a2c7
+# ╠═c488d92d-86cc-49db-93e7-b17455710367
+# ╠═895ef22d-7090-47cd-a2a7-977296546b27
+# ╟─d47e0bc8-5d0a-44f0-8056-e83e32a4c691
+# ╠═fbb5eb67-5f84-4780-a3a2-40655234b424
+# ╠═e89cdd11-d0f6-4214-bf9c-91427424ab08
+# ╟─dd946660-e72c-439d-9aa1-e81af81c10dd
+# ╠═7c777379-5e50-4f68-a00c-b19b81543298
+# ╟─cdbf7a05-8e90-42bb-81b8-97596f885ae6
+# ╠═7f67164f-1a12-438c-b802-4efef9a97717
+# ╟─ab2d3a8e-55c4-480f-aa0c-5bc1656e9bd7
+# ╠═cf0dfcec-57ea-4a7b-919d-282ac1a721cf
+# ╟─8ad949b2-e90a-44f6-a19b-4165b2750ba4
+# ╟─ff00db16-f8ee-4976-9619-2506b05f0d14
+# ╟─5382cc72-3d67-40d3-80d8-1ecd7959e3d8
+# ╠═148934fb-1996-424e-8b0c-3a5a4646060f
 # ╟─e6105acc-5fa6-453f-9b8e-c7e31d6834b6
 # ╟─3a77a494-d17a-4bcc-b59f-4668c07e31bc
+# ╟─bb5ff4d0-854b-4297-a887-9062ad6c1a9e
+# ╠═df78b4cb-25a1-41a5-9dce-251f827bd246
+# ╟─60ef8a59-dd84-4ab6-89a5-57f5af9f73de
+# ╠═77505144-d848-4f92-94c5-e5ea2c79fc07
+# ╟─d57511ea-a62c-4a46-9a6a-22bf3123d76b
+# ╠═dec56ad0-58e9-456e-a75d-090865149dbb
+# ╠═0a7d25d5-340e-45be-a1be-abb1cbf6ef36
 # ╠═5e78fe3d-4c9a-4597-9ca1-b641874e5996
 # ╠═dcb663f8-5a49-420b-85ba-17b8d60febcc
 # ╠═742d65cb-3196-4ace-8e91-65cb4b208696
@@ -2318,7 +2750,7 @@ version = "0.9.1+5"
 # ╠═c32eaf9d-3939-40ec-a7fb-83b911387591
 # ╠═9f01b2fc-1122-449a-92c9-663c734b3eff
 # ╠═8e448fd4-6a83-48f0-9345-44322f991a49
-# ╟─d33ef724-4bb7-4be5-a9cf-14a928fb2289
+# ╠═d33ef724-4bb7-4be5-a9cf-14a928fb2289
 # ╠═bbc98009-e757-4936-8251-d57426b8cb9b
 # ╠═8425a6ff-b968-4245-b351-face7d874a2b
 # ╠═371b82c0-518f-4a23-8d83-9775aefdfb76
@@ -2331,5 +2763,16 @@ version = "0.9.1+5"
 # ╠═6ce1d16b-479f-4175-9943-fbc611dcee9c
 # ╠═de0ba933-75c6-4548-8e95-78bfba8e6d4a
 # ╠═d6ed210d-2774-4a16-8f02-2e0391dce749
+# ╠═b4e5b91e-86f8-4691-a502-02f3e2e94789
+# ╠═a3c6ca6c-b503-4a98-b52c-bcae1638d19a
+# ╠═335a251f-e285-4d24-ba4e-defb24969a41
+# ╠═36a275f0-4ef1-4671-a803-58ad3041dcc9
+# ╠═df3384ac-5c5a-4e94-9a11-25d19c4056cc
+# ╠═679387b9-bb42-4463-bdc8-f152ff586746
+# ╠═b950836e-3c5f-4eb7-b7f9-c9d0d593dad8
+# ╠═80175ae5-0c49-4823-9d9f-6986376c620b
+# ╠═35bf23fc-caac-43fb-a67c-a4a962e4c3cf
+# ╠═7ae5b1eb-1279-4a64-87c4-9b2052a7eb35
+# ╟─d5feba51-64c7-4dfd-97b5-283be7e969dc
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
