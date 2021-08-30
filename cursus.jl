@@ -834,7 +834,6 @@ const N = 8
 # ╔═╡ 1b6f7894-d7ff-42e3-85c7-da52d561a680
 function unitvector(k::Int)
 	v = zeros(N)
-	v[k] = 1.0
 	#exercise: return vector of size N with entry k = 1, entry != k = 0
 	
 	return v
@@ -864,11 +863,7 @@ First, define the value ``k_m`` from the DCT equations as a function:"
 # ╔═╡ c852ed69-1fd7-45a7-9950-903631c21e16
 function k(m::Int)
 	#implement this function correctly
-	if m == 0
-		return 1/sqrt(2)
-	else
-		return 1
-	end
+	
 	return 0
 end
 
@@ -876,10 +871,10 @@ end
 md"Next, use this `k` function to define the matrices:"
 
 # ╔═╡ fc9f2534-c2dd-4227-b38d-e255587ce633
-DCT_II_Matrix = [sqrt(2/N)*k(m)*cos( (m*(n+0.5)*π) / N ) for m=0:N-1, n=0:N-1]
+DCT_II_Matrix = [0 for m=0:N-1, n=0:N-1]
 
 # ╔═╡ 3ef6afbe-ed53-4353-8c2a-38e500c5e98e
-DCT_III_Matrix = [sqrt(2/N)*k(n)*cos( ((m+0.5)*n*π) / N ) for m=0:N-1, n=0:N-1]
+DCT_III_Matrix = [0 for m=0:N-1, n=0:N-1]
 
 # ╔═╡ f174f359-4e4d-4bab-90fd-4c052ffafb45
 md"For clarity, the matrices are given multiplication-wrappers in the form of the following functions:"
@@ -912,7 +907,6 @@ md"Using the DCT function(s), modify the code that plotted the unit vectors to s
 
 # ╔═╡ fdc75ff3-b0ca-428f-9d99-dd8a49d4b126
 #exercise
-plot([discreteplot(DCT_III(unitvector(k))) for k=1:N]...)
 
 # ╔═╡ b1e13438-2afe-43e1-ac35-23812f06a2c7
 md"Next, we will demonstrate how to use the DCT to achieve compression. First, we generate a random vector of length ``N = 8`` and plot it using the `discreteplot` function."
@@ -924,7 +918,7 @@ y = rand(N)
 discreteplot(y)
 
 # ╔═╡ d47e0bc8-5d0a-44f0-8056-e83e32a4c691
-md"Next, we use the forward DCT, i.e. ``DCT-II`` to transform the function to the DCT domain. Then we plot it."
+md"Next, we use the forward DCT, i.e. `DCT-II`, to transform the function to the DCT domain. Then we plot it."
 
 # ╔═╡ fbb5eb67-5f84-4780-a3a2-40655234b424
 z = DCT_II(y)
@@ -943,7 +937,7 @@ z_compressed = let
 end
 
 # ╔═╡ cdbf7a05-8e90-42bb-81b8-97596f885ae6
-md"The next cell plots `z` next to the `z_compressed` where you set the smallest entries to zero manually."
+md"The next cell plots `z` next to `z_compressed`, which is the compressed signal where you manually set the smallest entries to zero."
 
 # ╔═╡ 7f67164f-1a12-438c-b802-4efef9a97717
 plot(discreteplot(z), discreteplot(z_compressed))
@@ -952,7 +946,7 @@ plot(discreteplot(z), discreteplot(z_compressed))
 md"Finally, modify the code in the next cell so that it displays the original signal `y` to the signal reconstructed from `z_compressed`."
 
 # ╔═╡ cf0dfcec-57ea-4a7b-919d-282ac1a721cf
-plot(discreteplot(y), discreteplot( DCT_III(z_compressed) )) #replace the zeros
+plot(discreteplot(y), discreteplot( zeros(N) )) #replace the zeros
 
 # ╔═╡ 8ad949b2-e90a-44f6-a19b-4165b2750ba4
 md"#### Showing that DCT-II and DCT-III are each other's inverses
