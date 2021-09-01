@@ -1,7 +1,7 @@
 # ComputationalAlgebraJPEG
 Interactieve course on JPEG
 
-1) Install Julia (https://julialang.org/downloads/)
+1) Install Julia from https://julialang.org/downloads/
 2) Download the file(s) in this project (on github, click "Code" and "Download ZIP") and unpack them
 3) Start the Julia REPL
 4) In the Julia REPL: `using Pkg; Pkg.add("Pluto")`
