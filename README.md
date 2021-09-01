@@ -1,4 +1,4 @@
-# ComputationalAlgebraJPEG
+# Computer Algebra JPEG
 Interactieve course on JPEG
 
 1) Install Julia from https://julialang.org/downloads/
