@@ -4,47 +4,39 @@
 using Markdown
 using InteractiveUtils
 
-# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
-macro bind(def, element)
-    quote
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
-        el
-    end
-end
+# ╔═╡ 2f197e3a-7d64-4a26-a9eb-6fcbc0965c10
+using Images, PlutoUI, Plots, Random
 
-# ╔═╡ 7b2079a5-70bd-4efa-9317-c64f062eaae7
-using Images, TestImages, PlutoUI, FFTW, Plots, StaticArrays, Random
-
-# ╔═╡ 0a05e850-cb9f-11eb-39cb-3d183bb8d5a9
+# ╔═╡ 04f64cf1-0dd5-4a81-91f7-01cd4f71277f
 md"""
-# Computational Algebra JPEG session 
+# Computational Algebra
+# JPEG session 
 
-In  this Pluto notebook we will learn how the JPEG compression works by implementing it ourselves
+In  this Pluto notebook we will learn the basics of Julia.
 """
 
-# ╔═╡ daac555d-0d99-4cc2-9ee1-b5317d52aad9
+# ╔═╡ bbd301c3-c918-4698-ac89-66f0dc971e6d
 md"""
 ## Julia basics
 """
 
-# ╔═╡ c45c4844-801f-43f5-b62c-ee7b30439b91
+# ╔═╡ c7e44bab-bf81-40d7-97bc-967d16ca3c53
 md"""
 First, import the packages we need for this notebook. If you have the newest version of Pluto, these packages should be installed automatically. This might take a while.
 """
 
-# ╔═╡ c8634d32-c113-4a42-954e-1ab5340562e5
+# ╔═╡ 888db76b-fad6-4f1c-8000-b04a553b190a
 md"""Before we can learn about JPEG, we first have to learn some Julia. It is asumed that you have a background in Python or MATLAB.
 
 In the next few sections, you will learn the basics of Julia through some small examples and interactive exercises.
 
 Be aware that the output of a cell containing code appears ABOVE the cell rather than below."""
 
-# ╔═╡ d63b3c97-8ed0-4cd4-b632-dd32d3180d17
+# ╔═╡ cac3127e-a50a-4e73-acbf-33fe1113690c
 md"""### Basic syntax: *if, for, begin, let*
 Let's look at some basic syntax, first `if`, `elseif`, `else`, and `&&`, or `||`, not `!`:"""
 
-# ╔═╡ 1defdc63-e4b3-4ec6-8369-7cd67e957bd4
+# ╔═╡ 4ced03dd-ffc9-4f34-8111-926088c8ea30
 if π == 3 || sin(1) == 1
 	"Engineer"
 elseif π == exp(1) && 0 * Inf == 0
@@ -55,10 +47,10 @@ end
 
 #no print function is needed here. print currently not yet supported in Pluto, only final output is shown
 
-# ╔═╡ 2474a164-147d-48dd-8f77-88e082756d0f
+# ╔═╡ 49ccc68d-2ee1-413e-a0f9-761492ec294d
 md"""Only 1 statement per cell is allowed, to get arround this we can use a `begin` block (exposes all its internal variables to the outside world) or a `let` block (only returns its last value)."""
 
-# ╔═╡ 3641ea76-46bb-409b-ad7f-a29d955127d4
+# ╔═╡ f4b22329-b72b-4bd2-a3c0-6c60764c0123
 begin
 	total = 0 #visible to everyone!
 	
@@ -69,10 +61,10 @@ begin
 	total
 end
 
-# ╔═╡ fafc1904-e1f9-4912-ba4e-c27117ba5677
+# ╔═╡ 3a5a8e5f-93eb-4943-a51e-6bb751c91f06
 total #visible!
 
-# ╔═╡ 713299aa-54e1-4462-ae59-49605e6e0e90
+# ╔═╡ 55f5374f-4062-4389-9764-2b4ffa4f5740
 let
 	secret_total = 0 #visible only inside this let block
 	
@@ -83,130 +75,130 @@ let
 	secret_total
 end
 
-# ╔═╡ bb3748af-d88e-4a81-bec5-75352c617f7a
+# ╔═╡ 82c15347-d499-4b5d-a7dd-7e50c36632c1
 secret_total #error, only the value of secret_total is returned from the let block, not secret_total itself.
 
-# ╔═╡ 32f5495e-0b87-47aa-9fd5-34e18a489e28
+# ╔═╡ 2aa1a20f-699e-483f-8698-92c0fede510e
 md""""
 ### Vectors/Matrices/Arrays
 
 Vectors and Matrices are subtypes of Array. As these examples show, they work as expected:"""
 
-# ╔═╡ def23802-a9be-4f25-a06b-24eed090f2ab
+# ╔═╡ 154ef61f-ddd2-45e8-aeea-2867af07ea21
 a = [1 2 3] #a 1x3 matrix
 
-# ╔═╡ 52c51b6b-29a8-44b2-8638-821462d5264c
+# ╔═╡ b0a1c2fd-f350-40c3-b680-113a47a90216
 b = [1, 2, 3] #a 3x1 vector
 
-# ╔═╡ f90fba79-795b-4285-8b19-444c63a9a34c
+# ╔═╡ 3028a080-5ffa-4e44-9edf-f58f945adcd6
 c = [1; 2; 3] #a 3x1 vector
 
-# ╔═╡ f53226ee-88b7-48bc-b96f-5c98cb91b179
+# ╔═╡ e2cf1bc5-3ea1-4f78-b48d-353bf0816bd9
 collect(1:3) #converts a range object start:stop into a dense vector 3x1
 
-# ╔═╡ 222b0e84-cc4a-4fbb-8b89-2f5e24ee811b
+# ╔═╡ 05b4d79d-c6b8-4548-b09d-d448f3b1ee37
 D = [1 2 3; 4 5 6; collect(7:9)'] #3x3 matrix
 
-# ╔═╡ 79b1efb8-3fea-4e86-92da-517cdac28773
+# ╔═╡ f4df16e0-a1fd-4b30-8df4-ec4ac72bce42
 D*c #a 3x1 vector
 
-# ╔═╡ 72db5304-0ef0-4d56-9424-2465868f6863
+# ╔═╡ e0f95a40-c8f0-42af-a3cc-f9e2583f788e
 a - b' #transpose to match dimensions
 
-# ╔═╡ 8b54df1e-a7fd-4da4-97ed-90349cd27e84
+# ╔═╡ b4bf2537-6c7e-4383-bc1b-839ca7ae4ee3
 a * b #inner product
 
-# ╔═╡ a9426949-cf67-4415-923e-318663e4a753
+# ╔═╡ cf294c1e-fc17-4d96-8a14-b9be0f604d26
 b * a #matrix product
 
-# ╔═╡ ad1b44a6-65b9-4a2a-b32b-d9f83d45cd3b
+# ╔═╡ 98868a6e-22e9-4f3b-9af2-a684fea55d03
 b .* c #point-wise product
 
-# ╔═╡ 4712f8dd-5a2f-4a5f-81c3-e275f05ce97a
+# ╔═╡ 506e98ce-4e35-4294-a06d-d1a6585779ad
 size(D, 1)
 
-# ╔═╡ ac45accd-da73-4c7e-8daa-398cc15c2caf
+# ╔═╡ 3dc11c07-483d-4981-8317-14e0ae077cb7
 size(D,2)
 
-# ╔═╡ 69537a5a-f0bd-40d7-a681-9a908cb4c883
+# ╔═╡ 18d8d7e5-e517-4fb9-bf52-9711645ec86b
 length(D) #number of elements
 
-# ╔═╡ 95f5eac2-ff17-4eaa-b8e6-b16c13b18b8d
+# ╔═╡ 890e0cf9-6c9e-4ed3-bd17-c35ac0352f5f
 md"""
 ### Array slicing
 Nothing out of the ordenary. It is advised to re-run every cell in order because of the reactive nature of Pluto notebooks.
 
 """
 
-# ╔═╡ 330b067f-99b6-453b-8ef8-6d6cfa29c541
+# ╔═╡ 5db1d177-f376-4111-a9ab-d250a7f87ba1
 D[:, 1]
 
-# ╔═╡ ed035485-6c4d-4b6e-ab69-4d5010b5399f
+# ╔═╡ 79424ae0-8e2e-4f85-aa5f-e30a9aedfa4c
 D[:, 1:2:3]  #start:stepsize:stop
 
-# ╔═╡ cc0c6b8b-2552-40ac-a6d8-e0e73d94a631
+# ╔═╡ d8aa5b7c-76d8-4f61-809c-1b45410f7472
 D[2:3, 1:2]
 
-# ╔═╡ ffc6fd00-90a8-4683-9a2a-0f08e6979b8d
+# ╔═╡ a8db4a27-bcb9-43f3-b85e-9544c63829f6
 D2 = copy(D) #deep copy, D2 = D is shallow copy!
 
-# ╔═╡ be219366-ae51-4a34-bf94-96e4fe942dfc
+# ╔═╡ 91c1ad84-2ce5-4d0f-ab78-54f732fba609
 D3 = D[:, :] #also deep copy, slicing on right hand side always creates new array
 
-# ╔═╡ 63ac8a21-1a07-4708-b54c-f9efb279414a
+# ╔═╡ a52df092-bf28-447e-b6dd-1e4fc122021b
 D3[1,1] = 10 #change element in D3
 
-# ╔═╡ 5ee06623-5d13-4a5e-b72e-0fc7c983883d
+# ╔═╡ 4f0f6f57-eb63-490b-9f01-5aee61358a3a
 D3 #changed
 
-# ╔═╡ 95b4b482-dd40-420a-a9f2-9a0f377f9db8
+# ╔═╡ b03b6b1c-8f17-46cf-a90a-e8d92dbc05a1
 D #unchanged
 
-# ╔═╡ 7da385e0-c032-4110-926c-44a2b657a2d3
+# ╔═╡ 11d947e9-a55d-4392-92c7-5840a0f46fd5
 D3[2, :] = c #second row equal to column vector c (no problemo)
 
-# ╔═╡ bf4260a4-ca5d-418b-985b-515898817320
+# ╔═╡ 8b1cea13-a02f-4b06-8dd6-b0f5f02a7840
 D3
 
-# ╔═╡ 47017d5e-aad4-41f4-b9c8-533721784646
+# ╔═╡ e89b2b4a-d1a2-4bce-bdcd-354690b3f36f
 D3[3, :] = a #third row equal to row vector a
 
-# ╔═╡ 5a5b2db1-ba56-47c2-b5ce-f7647d10016e
+# ╔═╡ b556bbd3-3c0e-4897-93a5-7dd1a4d8a3a2
 D3
 
-# ╔═╡ d3c1e945-17d9-4a07-8805-242c898ea2d6
+# ╔═╡ c2bc4183-7d23-4485-a2e8-c991b8c4a1f9
 D3[1, :] .= 33 #need dot-syntax if scalar on right hand side
 
-# ╔═╡ 8954bb72-0421-4073-9a67-4ef12259b760
+# ╔═╡ 8cda889a-868e-4bbc-9d91-56d494fa73fa
 D3
 
-# ╔═╡ 3d83ac25-23d2-48d8-bdcd-5b76e4210a21
+# ╔═╡ 5f50d324-c906-40e8-b67e-edd0a07a58b1
 md"""
 ### Functions
 Now let's define some functions. There are two main ways to define a function:
 """
 
-# ╔═╡ b59b26a9-62b2-4a73-aa98-933d42a9d2ca
+# ╔═╡ cfe065ca-b6c9-4c78-aa97-d6fb170302cf
 function f(m::Int, n::Int, x) #arguments CAN be type-annotated, but don't have to be
 	return x^m + x^n + 2
 end
 
-# ╔═╡ 97af0d61-0c4b-4d6b-8fc4-7ec2c067d5a9
+# ╔═╡ 93a0bdf1-4296-4a3d-a81b-e0a4c1e4e6a1
 #one-line functions like this can also be defined as:
 f_same(m::Int, n::Int, x) = x^m + x^n + 2
 
-# ╔═╡ 8643dfe4-16d1-4f3e-872f-de97b07e1944
+# ╔═╡ 33a7220a-3d1b-49ee-b7b1-f705b5bc90fa
 md""" 
 The plotting package is notoriously slow to pre-compile, but once compiled very fast. The following code shows how to plot a sine function from `-2` to `2`. Can you adapt it to go from `-π` to `π`? (Yes, Julia supports LaTeX symbols! Just write e.g. `\pi<TAB>`) You can also use `pi` if you don't like fun.
 """
 
-# ╔═╡ 349db48e-c1e0-42a2-838d-db5267cadc3d
+# ╔═╡ e8068e83-baa9-4a60-8128-9e997fa04eb6
 let
 	t = LinRange(-2, 2, 1000)
 	plot(t, sin.(t), framestyle=:origin)
 end
 
-# ╔═╡ 505a5eac-f0be-4969-889b-97f5ffc406da
+# ╔═╡ a065ff8e-162a-4fec-829f-aea530bb299c
 md"""
 **Remark:** you may have noticed the weird `.` in `sin.(t)`. This is called vectorization. The sine function is only defined on scalars, but in Julia you can make ANY function work on Vectors/Matrices/Arrays by calling it with a dot before the opening bracket. The dot syntax does not affect scalar arguments. More on this in the next sections.
 
@@ -215,7 +207,7 @@ To add a plot to an existing one, you have to use the `plot!` function. Don't fo
 Try to add a plot of `f` with `m=2` and `n=1`
 """
 
-# ╔═╡ 1b6ffe16-7b63-41c1-84c8-87aabe51badc
+# ╔═╡ b4ed7228-da36-4846-ab6b-e8d935de6b7d
 let
 	t = LinRange(-3, 3, 1000) #behaves like a 1000x1 vector
 	
@@ -226,22 +218,22 @@ let
 
 end
 
-# ╔═╡ 268cfedb-e3a2-4bdf-9173-5395bb618b37
+# ╔═╡ 9f8c7622-b8ab-49e9-be84-bb5dd2738fca
 md"""### Functions and Vectors/Matrices/Arrays (extended)
 
 Now let's see how functions and vectors play together in Julia.
 """
 
-# ╔═╡ 039d1246-2189-42d7-859b-1f0358a3ed3c
+# ╔═╡ 3f511a39-0417-40e0-9e4b-80266578c7f3
 test_vector1 = [-2 -1 0 1 2]  #1x5: "type: matrix"
 
-# ╔═╡ 85a68539-044e-4f8d-a065-7e747bde4c83
+# ╔═╡ df9a51a1-80db-437a-b9df-7da4c886b1ce
 test_vector2 = [-2, -1, 0, 1, 2] #5x1: "type: vector"
 
-# ╔═╡ e1c506e9-bc39-4142-abec-5b7322528e70
+# ╔═╡ 06eba15a-5f14-4082-aa5e-92954f1e411f
 test_matrix1 = [1 2 3 4 5; 4 5 6 7 8] #2x5: "type: matrix"
 
-# ╔═╡ 70c3ea70-bace-47eb-84cf-b246ab300b23
+# ╔═╡ 7a3ba94d-4995-40a1-99c0-cee5cf70f86a
 md"""Although we have encountered many types (Int and Float for scalars, Vector and Matrix for Arrays, unless you want absolutely optimal performance, you don't have to worry about them.
 
 Let's now apply the function `f(2, 1, .)` element-wise on each of our 3 Arrays (the parent type for Vector and Matrix). Julia has very convinient syntax to do this. Let `v` be an arbitrary Array, then 
@@ -256,54 +248,54 @@ Complete the following three exercises on vectorization. Your solutions should b
 The first two are warm-up questions and require no further explaination.
 """
 
-# ╔═╡ f0259140-3167-4ad8-a1ae-f9c8d0d2d77c
+# ╔═╡ ef4c6947-7534-4262-8436-92c28fcddb88
 solution1 = 0 #apply sin element-wise on test_vector1
 
-# ╔═╡ 05c9f15b-bfb3-43a5-ad6c-0a14f127b96d
+# ╔═╡ 2069bc26-71bc-404b-b0f1-8bf25b3d99d1
 solution2 = 0 #apply f(2, 1, _) element-wise on test_vector2
 
-# ╔═╡ 754fddfe-2f2c-448c-9d8c-dec5d994408f
+# ╔═╡ 35a10f78-df54-4d68-adda-61aea2ef6ddb
 md"""A function can also be vectorized in two arguments, if they are Arrays of the same dimensions. To see this, first a new matrix is defined for you, of the same size as `test_matrix1`:"""
 
-# ╔═╡ f1636d30-8527-467a-99b6-6eac97c59c61
+# ╔═╡ 37ff6a8b-6352-4a38-b40d-a306cbbd98f7
 test_matrix2 = [4 2 4 2 4; 2 4 2 4 2]
 
-# ╔═╡ 6103db78-7b43-47dd-a1dd-4637c38b898b
+# ╔═╡ 2cbf3f7c-367b-47b1-a7b9-2e0821ef365a
 md"""Next, you have to define a function `g(x,y)` that takes x to the power `sqrt(abs(y)))`."""
 
-# ╔═╡ 5a9d52bf-11b0-40ca-946c-ed7248fbbf20
+# ╔═╡ db6f0812-f69b-472d-b7dc-8cc0712f5605
 function g(x, y) 
 	
 	return 0 #replace the dummy return value with what is asked
 end
 
-# ╔═╡ 3f60a50a-aaab-401b-ae81-cacc347fc947
+# ╔═╡ 2eca82dd-2f58-4e5c-ac01-f09ad0b956f7
 md"""Now use this newly defined function `g` and the vectorization syntax to create a new matrix, `solution3`, such that 
 
 `solution3[i,j] = test_matrix1[i,j] ^ sqrt(abs(test_matrix2[i,j]))`"""
 
-# ╔═╡ 177870cf-677c-45e2-972a-d56b8ced29f0
+# ╔═╡ 0b532231-e5c0-4f25-8353-0f68f90d6bf5
 solution3 = 0 #replace this dummy value with the correct value
 
-# ╔═╡ 7bb1bd36-6a51-4a41-b794-ed49ffeefef6
+# ╔═╡ f89febf6-f431-4dd4-88e8-0fcf76ed89e7
 let
 	sol3(a, b) = a.^sqrt(abs(b))
 
 	md"""
 	Check solutions:
-	1) $(solution1 == sin.(test_vector2) ? :correct : :incorrect)
-	2) $(solution2 == f.(2,1,test_vector1) ? :correct : :incorrect)
-	3) $(solution3 == sol3.(test_matrix1,test_matrix2) ? :correct : :incorrect)
+	1) **$(solution1 == sin.(test_vector2) ? :correct : :incorrect)**
+	2) **$(solution2 == f.(2,1,test_vector1) ? :correct : :incorrect)**
+	3) **$(solution3 == sol3.(test_matrix1,test_matrix2) ? :correct : :incorrect)**
 	"""
 end
 
-# ╔═╡ 1005e439-e51e-4051-8dd8-627aff03dc17
+# ╔═╡ 2aedcb87-b267-41fb-813f-2c46c61c2111
 md"""
 ### Functions and Vectors/Matrices/Arrays (extended II)
 Functions can also take entire Arrays as arguments. Take the next function for example, which takes an arbitrary Array as an input (Vector or Matrix) and finds its maximum value:
 """
 
-# ╔═╡ fb31605e-fc08-4ec9-8872-cf47020b9701
+# ╔═╡ 14f39cf4-9f11-46b0-aa6a-a8ee6ef1b729
 function findmaximumvalue(x::AbstractArray) #type annotate x
 	M = x[1]
 	
@@ -315,12 +307,11 @@ function findmaximumvalue(x::AbstractArray) #type annotate x
 	
 	return M
 end
-			
 
-# ╔═╡ 518208c6-a179-40bf-819d-162871b2df71
+# ╔═╡ 20cd5b6d-099d-4121-8aad-f683ddff9de5
 findmaximumvalue([1 2 3 1000 4 5])
 
-# ╔═╡ 2891c2f0-4a1f-4cad-b48e-b40e4c33b7c6
+# ╔═╡ aefd62e0-50fa-4d07-8068-b5ac1c194bfc
 md"""Because Arrays are passed *by reference*, a function can modify the array it receives. By convention, functions that modify (one of) their arguments have their name appended with a "!" (bang).
 
 Here we wrote `AbstractArray`, which is the parent class of *all* Julia's Vector/Matrix-like classes. This is to not exclude any possible arguments (e.g. SparseArrays, SparseMatrices, SymmetricMatrices, StaticArrays,... all of which are special container classes that *behave* like a normal Array, but aren't necessarily implemented like on under the hood).
@@ -328,7 +319,7 @@ Here we wrote `AbstractArray`, which is the parent class of *all* Julia's Vector
 #### Exercise
 Write a function that receives an Array containing numerical values, and replaces all negative values with zero. The cell below the next cell dynamically checks your solution."""
 
-# ╔═╡ d7e8900e-64b1-4866-94bd-786b3af99d8d
+# ╔═╡ 6b80c27e-b077-4045-aa59-520856da3021
 function replace_neg_with_zero!(x::AbstractArray)
 	
 	#smart code here
@@ -337,7 +328,7 @@ function replace_neg_with_zero!(x::AbstractArray)
 	return nothing #doesn't have to return anything. "return x" is also possible, it is a matter of taste. I think it is more Julian to return x though. But anyway now you know how to return nothing. If you don't write "return nothing" Julia returns the last statement in the function.
 end
 
-# ╔═╡ d5774ec1-87ad-47d7-a1df-ba4c2ac4cbe2
+# ╔═╡ 506f30ee-c248-4656-a82c-1db34df659ad
 let
 	t = rand(-4:-1, 20)
 	replace_neg_with_zero!(t)
@@ -346,12 +337,11 @@ let
 	md"""**Solution correct!**""" :
 	md"""**Solution incorrect!**"""
 end
-	
 
-# ╔═╡ 086f76c4-5d9a-47d9-b3d2-1ae168e24a6c
+# ╔═╡ bf6cf043-d826-41d6-8c05-568558bc5e1c
 md"In this section we used type annotation in the function's arguments. This is not mandatory in Julia. Besides clarity for the reader, it also offers some other advantages which we'll discuss in the section *Type annotation and multiple dispatch*."
 
-# ╔═╡ 17384aa0-7e76-44b3-931e-38099bd4ff6d
+# ╔═╡ 3baef1d0-e6c8-4921-960d-dc997085dda0
 md"""
 ### Functions and slices of Arrays (extended III)
 As mentioned before, slices, i.e. `A[a:b]` make a copy rather than a reference.  If your have written your 
@@ -361,64 +351,64 @@ As mentioned before, slices, i.e. `A[a:b]` make a copy rather than a reference. 
 function correctly, the follow block should return `[0 2 0 4 0]`.
 """
 
-# ╔═╡ d9113067-8787-4a18-a5fc-9011a44a2173
+# ╔═╡ a1aa9106-63b6-4154-b0f3-8253726e47a9
 let 
 	t = [-1 2 -3 4 -5]
 	replace_neg_with_zero!(t)
 	t
 end
 
-# ╔═╡ 1c94f4c3-38e7-48a1-8b5f-e15a821b0a4e
+# ╔═╡ f1eada74-107a-4ae0-8f05-efc22f0ba9f8
 md"""
 However, it won't work here, where we only want to apply the function on the last 4 elements of `t`:
 """
 
-# ╔═╡ 9a925811-bb2e-4b30-8521-a04d7b411820
+# ╔═╡ e76b2238-7f9a-486d-84a4-6dc46bfcd544
 let 
 	t = [-1 2 -3 4 -5]
 	replace_neg_with_zero!(t[2:5])
 	t
 end
 
-# ╔═╡ bd915961-5602-465c-9c99-0623481a9272
+# ╔═╡ 6e14eb67-b2b7-473c-a6a5-8b2abe9c9e85
 md"""The solution is to pass the slice *by reference*. In Julia this is done using the `@views` macro (for all arguments)"""
 
-# ╔═╡ 0c8e29c3-d896-48db-986b-8bfc635b17be
+# ╔═╡ 28a70fae-164e-49f6-aea9-92dfd8609be6
 let 
 	t = [-1 2 -3 4 -5]
 	@views replace_neg_with_zero!(t[2:5])
 	t
 end
 
-# ╔═╡ 93e518f1-47fe-48d8-990a-78eca8f2d4c3
+# ╔═╡ eab06327-792b-43f9-80c5-f57b8c2581e6
 md""" 
 or with the `@view` macro (for just one argument) 
 """
 
-# ╔═╡ e456f2fc-cae5-4c9a-91d2-b3184561606d
+# ╔═╡ 24694400-4039-41f0-9778-c115a1007502
 let 
 	t = [-1 2 -3 4 -5]
 	replace_neg_with_zero!(@view(t[2:5]))
 	t
 end
 
-# ╔═╡ e4021a39-7e9f-479b-9d69-95447c6cc9dd
+# ╔═╡ 6c38db6d-0770-4a6e-b865-227a7b658b20
 md"""(here it doesn't make any diference because the function only takes one slice as an argument)"""
 
-# ╔═╡ 024e2a32-d4f2-4114-8968-bb7e31a9c8fd
+# ╔═╡ 84ae1279-29b7-4d85-bd0a-6288bb017a95
 md"""**Remark:** the `@view` macro should be used with round brackets, like a function call:
 
 `@view( t[a:b, c:d, e:f] )`
 
-The `@views` macro doesn't require this.
+The `@views` macro does not require this.
 """
 
-# ╔═╡ f16510d8-3a13-4881-b83f-c41668f96c4d
+# ╔═╡ d5495d41-41f3-44d1-b6e1-95076073d484
 md"""
 #### Exercise
 Write a function `foo!(mat, row, val)` that replaces all values in row `row` of matrix `mat` with value `val`."""
 
-# ╔═╡ 4c6d074a-6564-4a45-bcf3-fb417e4d2ba1
+# ╔═╡ b30ad480-b75e-4b70-9e6c-9d3fe82189c9
 function foo!(mat::AbstractMatrix, row::Int, val)
 	
 	#exercise code here
@@ -426,7 +416,7 @@ function foo!(mat::AbstractMatrix, row::Int, val)
 	return mat #let's be law abiding Julians and return mat from now on
 end
 
-# ╔═╡ 1f09d825-e884-415d-a4c5-8ad62938c0ff
+# ╔═╡ bfce571e-7948-44b4-8b39-72cf8cb76fa1
 let 
 	A = rand(4,4)
 	foo!(A, 2, 9)
@@ -437,12 +427,12 @@ let
 
 end
 
-# ╔═╡ 5a4ca684-0375-4a23-b480-b8ab4e2dc26e
+# ╔═╡ d789ca5a-f8a2-441e-9501-530a8d30cf08
 md""" 
 An engineer skipped a very important part of this tutorial, and wrote the following, incorrect, code. He tried to use the function `foo!` to set the right half of the 4th row equal to zero. Can you fix his code?
 """
 
-# ╔═╡ 34590bcf-5804-4e96-b869-3f9709475b43
+# ╔═╡ 31b79d8d-3718-4c07-acb4-25c4c7fe087c
 #matrix definition
 begin
 	luigi = [1 2 3 4 5 6;
@@ -455,7 +445,7 @@ begin
 	foo!(luigi[:, 4:6], 4, 0)
 end
 
-# ╔═╡ 8ba9d6ae-ad53-4191-b710-74549e039ab7
+# ╔═╡ f28f4546-a51a-4e55-9f84-6246375b20c6
 let 
 	mario = [1 2 3 4 5 6;
 			 6 4 3 1 9 3;
@@ -469,13 +459,13 @@ let
 	md"""**Solution incorrect!**"""
 end
 
-# ╔═╡ 954d43cd-71f1-44b8-b073-ade1e74cdddb
+# ╔═╡ effa8e34-a25d-49fb-8c8e-b70d1eb32a5c
 luigi
 
-# ╔═╡ 960c07a7-9f4e-4a75-a1b4-e8bd27968312
+# ╔═╡ f03bafa1-175c-4c9d-8e69-c05ee0c3cd81
 md"""**Remark:** in the type annotations, it is often a good idea to write `Abstract{Vector, Matrix, Array}` instead of `{Vector, Matrix, Array}`. The reason being that Julia supports many types of different Vectors, Matrices and Arrays (Sparse, Immutable and even the `@view[s]` macro returns a special subtype of `Abstract{Vector, Matrix, Array}`). Writing general, reusable code is one of the main design philosophies of Julia, and its type system makes this very easy."""
 
-# ╔═╡ 483c2f13-53b4-4149-b517-91e25e9ce32f
+# ╔═╡ 0c947e1e-c6b0-4eca-ab73-8fbd08200dd7
 md"""
 **Remark:** printing/showing output (currently) is a bit inconvenient in Pluto; all printing should be wrapped within the following block:
 
@@ -484,7 +474,7 @@ md"""
 which should also be the last expression of the cell. See the example below. But in future versions this should be more convenient. The following code is an example that shows how to do printing. An alternative is to "just print" and look at the output in the terminal from which Pluto was initiated.
 """
 
-# ╔═╡ 65335b08-0a73-4e6e-9fcd-c734ac2689eb
+# ╔═╡ 7b83c246-2845-47bc-815b-c455ad29ea51
 let
 	s = 0
 	with_terminal() do 
@@ -500,7 +490,7 @@ let
 	end
 end
 
-# ╔═╡ 57a8da57-cd62-4f23-823f-6832b0556d95
+# ╔═╡ c4e9a74a-fa80-4238-811d-a24ba7c3727b
 md"### Type annotations and multiple dispatch
 Multiple dispatch is often marketed as Julia's *killer feature*. Let's see what all the fuss is about.
 
@@ -509,7 +499,7 @@ Let's define a function `cut_in_half`. This function should behave differently d
 We could write the following code:
 "
 
-# ╔═╡ dd14c65f-f75c-4049-8b7d-1aced363128d
+# ╔═╡ c251bc0b-84ff-4b6f-ad6c-10d77210f072
 function cut_in_half(x)
 	if typeof(x) <: AbstractVector  #<: "is a subtype of"
 		L = length(x)
@@ -521,44 +511,44 @@ function cut_in_half(x)
 	end
 end
 
-# ╔═╡ efbb1823-4544-4a38-8355-00c6ecc0ed15
+# ╔═╡ 0d017248-abe3-46ae-a592-532b8147e61d
 md"This code works as demonstrated by the following exampels:"
 
-# ╔═╡ e1c3e6e4-5c85-4b94-a46a-62a5c360d87c
+# ╔═╡ f28aa4a1-4c56-4461-b5b9-c9f4a11e2111
 cut_in_half([1, 2, 3, 4])
 
-# ╔═╡ de94e237-ac88-4af7-9a4a-edfdf472d05f
+# ╔═╡ a2ce01de-d6ec-4564-9d14-11b778954d22
 cut_in_half(16)
 
-# ╔═╡ 0af95729-e596-4382-ada7-0093fb909796
+# ╔═╡ c783a9f7-d22a-4389-9631-846d50fc2a74
 cut_in_half("This is a string. This should give an error.")
 
-# ╔═╡ db3ed199-8efd-4e13-b361-54e1becebf7a
+# ╔═╡ d862d37b-1306-4e4b-a2e3-380ab424b107
 md"But it is not very elegant. Moreover, every time we want to add `cut_in_half` behavior for a new type, we have to edit the function. Enter multiple dispatch. Multiple dispatch allows us to overload functions, i.e. have two functions with the same name, based on their type signature. Let's rewrite the `cut_in_half` function as `cutInHalf`:"
 
-# ╔═╡ fba92f2c-e0a8-4a82-b063-811146ef09eb
+# ╔═╡ b72a4588-fed6-441c-8bee-8d5713474691
 function cutInHalf(x::Number)
 	return x/2
 end
 
-# ╔═╡ 1c34938a-a05b-4855-9744-e307cea8863b
+# ╔═╡ 09094202-6632-4349-91ad-0a7010352bd4
 function cutInHalf(x::AbstractVector)
 	return x[1:length(x)÷2]
 end
 
-# ╔═╡ 8d21f297-5a7f-4640-bb8a-69b4e436168a
+# ╔═╡ fe2f4971-7cde-459d-aa6b-33679f974d7c
 md"In Julia we say the *function* `cutInHalf` has 2 *methods*, i.e. one for `Numbers` and one for `AbstractVectors`. Let's demonstrate how to use these functions:"
 
-# ╔═╡ 981bf301-5ad7-4b16-8a10-b1ce7449ff66
+# ╔═╡ 35795d9a-585c-4b43-9c88-e95428e91fb1
 cutInHalf([1,2,3,4])
 
-# ╔═╡ 97f9aa49-1420-4b05-b0ea-46ffb439ad92
+# ╔═╡ 1edc503a-92bb-40cc-8263-ab7dca6e2d59
 cutInHalf(16)
 
-# ╔═╡ bb4f1863-2948-428c-8124-c3927dacbcc4
+# ╔═╡ 2510ea0e-7630-4f36-a946-ea4a79253c9e
 cutInHalf("This is a string. This should AUTOMATICALLY give an error")
 
-# ╔═╡ 52935cae-f774-4298-be8c-b379ec1c1b7a
+# ╔═╡ aba6e772-fe36-4286-bbf5-efb227625797
 md"The keen-eyed reader will have noticed that our `cutInHalf` function takes an `Int`[eger] as an input, but outputs a `Float64`. This can be unwanted behavior. 
 
 In Julia, there is an easy solution: define a new *method* for the *function* `cutInHalf` with an `Int` *type signature*.
@@ -567,1176 +557,47 @@ Due to the reactive nature of Pluto notebooks, this would also alter the result 
 
 That's why we change the naming one last time:"
 
-# ╔═╡ 393ed59c-8cc3-48a8-9fed-ec44e15db10a
+# ╔═╡ 40ab20ce-2553-4c18-85f8-a995bf583f06
 function cutinhalf(x::AbstractVector)
 	return x[1:length(x)÷2]
 end
 
-# ╔═╡ 3754be18-d417-4d26-af28-7e8c1d7ab4cc
+# ╔═╡ 77e1d120-7f0d-420a-a5f9-0fe68606240d
 function cutinhalf(x::Number)
 	return x/2
 end
 
-# ╔═╡ bb1b79d0-0c35-49c6-8e54-ca01e017a242
+# ╔═╡ 66dee6e7-4eb7-4870-98d4-978de24d06d2
 function cutinhalf(x::Int)::Int
 	return x÷2 #integer division: use \div<TAB>
 end
 
-# ╔═╡ 267b2b47-79a0-4488-9a86-90f86b3b4e2e
+# ╔═╡ 8fc4cef8-6f01-4bb6-bc25-93764c104c0a
 md"""Julia follows the simple rule to "always use the *most specialized* method". Because `Int` is more specialized than the more general `Number`, for integers such as 16 the method `cutinhalf(::Int)` will be called, while for floating point numbers such as 16.0, Julia will fall back to the less specialized `cutinhalf(::Number)`.
 
 We also annotated the return type for one of the methods to show how this would be done."""
 
-# ╔═╡ cab9e98f-5967-4fbc-bc6a-173912c5a05a
+# ╔═╡ 545fe144-2cec-4f22-b531-1f0fdee68a7a
 cutinhalf(16.0)
 
-# ╔═╡ df6e7b9d-9c76-4447-aab8-2d427f063392
+# ╔═╡ 2912e2eb-7e94-4e16-92a2-40ab785854e8
 cutinhalf(16)
 
-# ╔═╡ 6d8c5631-55b0-4e98-b9cb-91bd33a7a32f
+# ╔═╡ a19aae44-cad8-4d11-828f-f40c64c8fee8
 md"""Now that we understand the basics of Julia syntax, we can manipulate some images!"""
-
-# ╔═╡ fd056009-de33-460a-8475-8e93d6e02d46
-md"""
-## JPEG
-### Image representation
-"""
-
-# ╔═╡ ea1994ed-a14e-4df9-b008-9eeefe69a831
-md"""Throughout this course, code is often hidden when only the output is important to the reader. The interested reader is invited to examine the hidden code outside of class.
-
-Let's load our test image for today"""
-
-# ╔═╡ 4f6c5da3-3d86-46d9-8e4d-c3f254fbd90e
-mandrill = testimage("mandrill")
-
-# ╔═╡ 644db8e8-9c18-4ea5-be45-17935b807ad9
-md"""In Julia, images are 2D matrices of RGB objects. To see the underlying 3 x $(size(mandrill,1)) x $(size(mandrill,2)) 3D matrix, we can use the `channelview` function (scroll sideways to see all three "pages" of the 3D matrix).
-
-Its output can be interpreted as 3 _pages_ of size $(size(mandrill,1)) x $(size(mandrill,2)). Note that pixels have values between 0 (black) and 1 (white). In MATLAB, depending on the data type (integer resp. float) intensity values range between 0 and 255, resp. 0 and 1. In Julia they always range between 0 and 1 because integer intensities `i` are interpreted as `i/255`.
-"""
-
-# ╔═╡ 42bc98e0-14cd-4a9c-8c21-dd2c87273358
-channelview(mandrill)[1, :, :], channelview(mandrill)[2, :, :], channelview(mandrill)[3, :, :]
-
-# ╔═╡ 8a1a4d61-0619-41b7-b980-7099cfb779d0
-md"Multiplying the matrices with 255 (and casting them to the `Int` type) results in a more traditional representation of the image"
-
-# ╔═╡ 2e96aab5-fc7a-4f2a-a2b4-ed27a9b7004b
-Int.(255*channelview(mandrill)[1, :, :]), Int.(255*channelview(mandrill)[2, :, :]),  Int.(255*channelview(mandrill)[3, :, :])
-
-# ╔═╡ 5e359f41-d768-4cd7-afd6-5b98806ed9a4
-md"""Let's tear the pages apart and store them in regular 2D matrices `R`, `G` and `B`."""
-
-# ╔═╡ 1ce58807-094b-4576-8fd4-9281ec8bf90d
-begin
-	R = channelview(mandrill)[1, :, :]
-	G = channelview(mandrill)[2, :, :]
-	B = channelview(mandrill)[3, :, :]
-end #output will only show B
-
-# ╔═╡ 84c7d5f7-2ecc-414e-89b3-1a746c583eee
-md"""Using some library functions, we can stack the R matrix on top of 2 zero arrays, which dims out the G and B channel. We do the same with the G and B channel."""
-
-# ╔═╡ 3ba49ed0-86f8-44d7-ad8c-919e18e39b3b
-hcat(colorview(RGB, StackedView(R, zeroarray, zeroarray)), colorview(RGB, StackedView(zeroarray, G, zeroarray)), colorview(RGB, StackedView(zeroarray, zeroarray, B)))
-
-# ╔═╡ d043cadb-d0ac-4570-a669-56b4718a62ec
-md"The following sliders control the proportion, `0% - 100%`, of the respective channels that is let through in the next example.
-
-Red: $(@bind R_intensity Slider(LinRange(0,1,101), 1, true))
-
-Green: $(@bind G_intensity Slider(LinRange(0,1,101), 1, true))
-
-Blue: $(@bind B_intensity Slider(LinRange(0,1,101), 1, true))
-"
-
-# ╔═╡ 34e2cee3-583c-4f30-bef7-676d30b76935
-colorview(RGB, R_intensity * R, G_intensity * G, B_intensity * B)
-
-# ╔═╡ 892d5edb-f572-41f4-b328-4dc0a0adf8ed
-md"""Being mathematicians (or computer scientists? can they also take this course?) we of course immediately realize that an RGB image is just a stack of 3 grayscale images! This means we can develop our compression techniques on a single channel."""
-
-# ╔═╡ e031b0fd-acc6-4552-93b5-ba6208848c6e
-mandrill_gray = Gray.(mandrill) #julia vectorize syntax
-
-# ╔═╡ b8e78721-fab9-4e10-bcd4-a3e2fed3e4d6
-md"""**Remark:** the ``RGB`` *color space* is just one way to store color coordinates. If you think of RGB as analogous to Cartesian coordinates, then there also exist color space which are analogous to polar coordinates. 
-  
-The ``HSI`` (hue - saturation - insentity) color space separates color information (hue: what color; and saturation: low: pastel and high: cartoon) from intensity information. In this sense HSI is very much like (θ, ϕ, ρ). 
-  
-Such representations that separate color information from intensity information are commonly used in image compression as the human eye is much more sensitive to intensity information than to color information. This means that greater compression without visual loss can be achieved by heavily compressing the channels that contain color information while leaving the intensity information more in tact.
-  
-JPEG converts color to ``YC_bC_r`` where ``Y`` can be seen as the average intensity and, ``C_b`` and ``C_r`` as the blue and red shift. This is a linear transform which is probably why it was chosen over others.
-"""
-
-# ╔═╡ 34df0824-f264-4493-b7b4-0c9946d03310
-mandrill_HSI = convert.(HSI, mandrill);
-
-# ╔═╡ e596f8c0-a7e7-4e92-99a8-3da11620aeab
-md"
-Control `S` in `HUE` image:
-$(@bind HUE_s Slider(LinRange(0,1,100), 100, true))
-
-Control `H` in `SAT` image: $(@bind SAT_s Slider(0:360))
-Control `I` in `SAT` image: $(@bind SAT_i Slider(LinRange(0,1,100), 100, true))
-
-"
-
-# ╔═╡ f976fa97-08c9-4a87-90fd-3d757359a53b
-let
-	H = channelview(mandrill_HSI)[1, :, :]
-	S = channelview(mandrill_HSI)[2, :, :]
-	I = channelview(mandrill_HSI)[3, :, :]
-	
-	onearray = ones(size(H))
-	
-	hcat(colorview(HSI, StackedView(H, HUE_s*onearray, 0.5 * onearray)), colorview(HSI, StackedView(SAT_s*onearray, S, SAT_i*onearray)), colorview(HSI, StackedView(zeroarray, zeroarray, I)))
-	
-end
-
-
-# ╔═╡ c81c323f-3137-46e3-8b54-445a440f1cf9
-md"**Exercise:** try to make sliders that modify values `α`, `β` and `γ`. Then display
-
-`colorview(HSI, StackedView(α * H, β * S, γ * I))`
-
-in the next cell. Experiment with different ranges."
-
-# ╔═╡ 460378ab-1322-4ce5-9b01-9d9c06144ab7
-#code for sliders
-
-# ╔═╡ c8f59286-8f23-49b4-805a-810cc109ef17
-#code for displaying images
-
-# ╔═╡ 7098bf12-c1b7-4f7b-bd3d-84fffe281b97
-md"## JPEG algorithm
-### Overview"
-
-# ╔═╡ b9c5dbc2-780f-4fc6-aaeb-cb88dbd7de11
-md"The JPEG *encoding* algorithm consists of the following steps:
-1. Forward Discrete Cosine Transform (FDCT)
-2. Quantization
-3. Huffman Encoding
-
-The JPEG *decoding* algorithm follows those steps in the opposite direction
-1. Huffman Decoding
-2. Dequantization
-3. Inverse Discrete Cosine Transform (IDCT)"
-
-# ╔═╡ 74721d26-66c3-44dc-a5a3-8cb8d0cb6f37
-md"### Discrete cosine transform
-#### Fourier cosine transform
-Repeat that the Fourier transform of a function ``x(t) : \mathbb{R} \to \mathbb{R}`` is given by
-
-```math
-\mathcal{F}(x(t))(\omega) = X(\omega) = \left(\frac{1}{2\pi}\right)^{1/2} \int_{-\infty}^{+\infty} x(t) e^{-i\omega t} \mathrm{d}t
-```
-and its inverse
-
-
-```math
-\mathcal{F}^{-1}(X(\omega))(t) = x(t) = \left(\frac{1}{2\pi}\right)^{1/2} \int_{-\infty}^{+\infty} X(\omega) e^{i\omega t} \mathrm{d}\omega
-```
-
-To derive the DCT, we first derive the (continuous) Fourier cosine transform. Let ``x: \mathbb{R}^+\to \mathbb{R}`` and define
-
-```math
-y: \mathbb{R} \to \mathbb{R}: t\mapsto \left\{\begin{array}{ll} x(t) &\text{if } 0 \leq t\\ x(-t) &\text{if } t < 0\end{array}\right.
-```
-
-Using Euler's identity, we find that
-
-```math
-\begin{align*}
-\mathcal{F}(y)(\omega) &= \left(\frac{1}{2\pi}\right)^{1/2} \int_{-\infty}^{+\infty} y(t) e^{-i\omega t} \mathrm{d}t\\
-&=\left(\frac{1}{2\pi}\right)^{1/2} \left[\int_{-\infty}^{0} x(-t) e^{-i\omega t} \mathrm{d}t + \int_{0}^{+\infty} x(t) e^{-i\omega t} \mathrm{d}t\right]\\
-&=\left(\frac{2}{\pi}\right)^{1/2}\int_{-\infty}^{+\infty} x(t) \cos(\omega t) \mathrm{d}t
-\end{align*}
-```
-
-This leads us to the definition of the *Fourier cosine transform*
-```math
-\mathcal{F}_c(x)(\omega) = X_c(\omega) = \left(\frac{2}{\pi}\right)^{1/2}\int_0^\infty x(t) \cos(\omega t) \mathrm{d}t
-```
-Also note that ``\mathcal{F}_c^{-1} = \mathcal{F}_c``.
-
-"
-
-# ╔═╡ 8876bdc8-2412-4879-a676-1dd9a49e8638
-md"#### The discrete cosine transform
-The integral that defines the Fourier cosine transform multiplies ``x(t)`` with the kernel ``K_c(\omega, t) = \cos(\omega t)``.
-
-We discretize this kernel by chosing intervals ``\Delta t, \Delta f > 0`` such that ``\Delta t \Delta f = N \in \mathbb{N}``. Next, we define ``\omega_m = 2\pi m\Delta f`` and ``t_n = n\Delta t`` where ``m, n = 0, 1,\ldots, N``.
-
-The discrete kernel is thus given by
-```math
-\begin{align*}
-K_c(m, n) &= K_c(\omega_m, t_n)\\
-&= \cos(2\pi m\Delta f \cdot n\Delta t)\\
-&= \cos\left(\frac{\pi m n}{N}\right)
-\end{align*}
-```
-
-This is an ``(N+1)\times (N+1)`` matrix ``[M]_{m,n} = K_c(m,n)`` where again ``m, n = 0, 1,\ldots, N``.
-
-That means our discretized integral, which we call the DCT, can be written as a matrix multiplication
-
-```math
-\underline{X} = M\underline{x}, \qquad \underline{x} \in \mathbb{R}^{N+1}
-```
-such that for ``m = 0, \ldots, N`` it holds that
-```math
-X_m = \sum_{n=0}^N x_n K_c(m,n) = \sum_{n=0}^N x_n\cos\left(\frac{\pi m n}{N}\right)
-```
-
-It can be shown that the inverse of ``M``, i.e. the inverse DCT, is equal to the transpose of ``M``.
-"
-
-# ╔═╡ 07c695be-89c9-492b-a714-4c89fce9b760
-md"""
-The JPEG standard however uses a different DCT pair, namely DCT-II and DCT-III. DCT-II is called the *forward* DCT and DCT-III is called the *inverse* DCT. 
-
-DCT-II:
-```math
-[C_N^{II}]_{m,n} = \sqrt{\frac{2}{N}} k_m \cos\left(\frac{m\left(n+\frac{1}{2}\right)\pi}{N}\right)
-```
-DCT-III:
-```math
-[C_N^{III}]_{m,n} = \sqrt{\frac{2}{N}} k_n \cos\left(\frac{\left(m+\frac{1}{2}\right)n\pi}{N}\right)
-```
-
-where this time ``m = 0, 1, \ldots, N-1`` and 
-```math
-k_m = \left\{\begin{array}{lLl}
-\frac{1}{\sqrt{2}} & \text{if }& m = 0\\
-1 & \text{if }& m = 1, 2, \ldots, N-1
-\end{array}\right.
-```
-
-A sketch of the proof that they are each other's inverses will be given in a subsequent section."""
-
-# ╔═╡ 423360f8-8e0f-4495-bcc8-de1e84709ca6
-md"#### Implementing the DCT
-As a warm-up to the 2D-DCT, first we will implement the 1D DCT. Let ``N = 8`` and change the `unitvector` function such that it returns a unit vector with a 1 on the ``k``th entry and 0 elsewhere."
-
-# ╔═╡ a88ab303-225e-4bdc-8101-69dc6a204ebc
-const N = 8
-
-# ╔═╡ 1b6f7894-d7ff-42e3-85c7-da52d561a680
-function unitvector(k::Int)
-	v = zeros(N)
-	#exercise: return vector of size N with entry k = 1, entry != k = 0
-	
-	return v
-end
-
-# ╔═╡ c72da624-f8d7-4c12-b9f8-0485c7b27c09
-begin
-	function discreteplot(f::AbstractArray)
-		N = length(f)
-		x = [floor(i/3) for i=0:3*N-1]
-		f2 = [let rem = i%3; if rem==0 0 elseif rem==1 f[1 + (i-1)÷3] else NaN end end for i=0:3*N-1]
-
-		plot(x,f2, line=2, framestyle=:origin, linecolor=:blue, label=nothing, xticks=nothing)
-		scatter!(0:N-1, f, color=:blue,     markerstrokewidth = 0, label=nothing, xticks=nothing)
-	end
-	md"The next cell uses the provided function `discreteplot(::Vector)` to plot the unit vectors you just defined. This allows you to verify your implementation."
-end
-
-# ╔═╡ 6bfca45d-3c4e-4389-a370-f71afcac208b
-plot([discreteplot(unitvector(k)) for k=1:N]...)
-
-# ╔═╡ d486cce7-275d-43d0-b27b-81ab27465314
-md"Next, we will implement the DCT functions. Although these are just matrix multiplications, wrapping them inside a function provides additional clarity. 
-
-First, define the value ``k_m`` from the DCT equations as a function:"
-
-# ╔═╡ c852ed69-1fd7-45a7-9950-903631c21e16
-function k(m::Int)
-	#implement this function correctly
-	
-	return (m == 0 ? 1/sqrt(2) : 1.0)
-end
-
-# ╔═╡ efb1196c-7724-4326-8874-db0cf14b99ff
-md"Next, use this `k` function to define the matrices:"
-
-# ╔═╡ fc9f2534-c2dd-4227-b38d-e255587ce633
-DCT_II_Matrix = [0 for m=0:N-1, n=0:N-1]
-
-# ╔═╡ 3ef6afbe-ed53-4353-8c2a-38e500c5e98e
-DCT_III_Matrix = [0 for m=0:N-1, n=0:N-1]
-
-# ╔═╡ f174f359-4e4d-4bab-90fd-4c052ffafb45
-md"For clarity, the matrices are given multiplication-wrappers in the form of the following functions:"
-
-# ╔═╡ 497017ed-0b22-440e-b96f-23f860096a94
-DCT_II(x::Vector) = DCT_II_Matrix * x
-
-# ╔═╡ 7ec184e2-2edd-4876-a5b5-99bfaf3231b9
-DCT_III(X::Vector) = DCT_III_Matrix * X
-
-# ╔═╡ a6efa895-cc01-415e-a498-76a013eb39dd
-md"Let's test the implementation of our DCT functions on some unit vector. `DCT_III(DCT_II(u))` should be again equal to `u`."
-
-# ╔═╡ 61fa4793-654b-4640-b9d2-2d9d1aaf2e77
-begin
-	function clean_round(v::AbstractVector)
-		[let r = round(Int, vi);
-			abs(r - vi) < 1e-14 ? r : vi
-		 end for vi in v]
-	end
-	
-	md"The result of the previous cell might look hard to interpret due to machines precision errors like `6.93889e-18`. To make the result easier to interpret, this notebook provides the utility function `clean_round(::Vector)`. Try using it on the result of the above cell."
-end
-
-# ╔═╡ 6273e361-bc33-46ac-a890-04c96bb009d1
-DCT_III(DCT_II(unitvector(3))) |> clean_round
-
-# ╔═╡ e41ba4f3-7411-4fde-83da-e3444402e95a
-md"Using the DCT function(s), modify the code that plotted the unit vectors to show the basis vectors of the DCT"
-
-# ╔═╡ fdc75ff3-b0ca-428f-9d99-dd8a49d4b126
-#exercise
-
-# ╔═╡ b1e13438-2afe-43e1-ac35-23812f06a2c7
-md"Next, we will demonstrate how to use the DCT to achieve compression. First, we generate a random vector of length ``N = 8`` and plot it using the `discreteplot` function."
-
-# ╔═╡ c488d92d-86cc-49db-93e7-b17455710367
-y = rand(N)
-
-# ╔═╡ 895ef22d-7090-47cd-a2a7-977296546b27
-discreteplot(y)
-
-# ╔═╡ d47e0bc8-5d0a-44f0-8056-e83e32a4c691
-md"Next, we use the forward DCT, i.e. `DCT-II`, to transform the function to the DCT domain. Then we plot it."
-
-# ╔═╡ fbb5eb67-5f84-4780-a3a2-40655234b424
-z = DCT_II(y)
-
-# ╔═╡ e89cdd11-d0f6-4214-bf9c-91427424ab08
-discreteplot(z)
-
-# ╔═╡ dd946660-e72c-439d-9aa1-e81af81c10dd
-md"On the above plot, some coefficients will have much smaller magnitude compared to others. To achieve compression, we can set the smallest entries of `z` to zero. Modify the code below to your specific case."
-
-# ╔═╡ 7c777379-5e50-4f68-a00c-b19b81543298
-z_compressed = let
-	a = copy(z)
-	a[6] = a[3] = a[4] = a[5] = 0 #modify this, leave the other lines
-	a
-end
-
-# ╔═╡ cdbf7a05-8e90-42bb-81b8-97596f885ae6
-md"The next cell plots `z` next to `z_compressed`, which is the compressed signal where you manually set the smallest entries to zero."
-
-# ╔═╡ 7f67164f-1a12-438c-b802-4efef9a97717
-plot(discreteplot(z), discreteplot(z_compressed))
-
-# ╔═╡ ab2d3a8e-55c4-480f-aa0c-5bc1656e9bd7
-md"Finally, modify the code in the next cell so that it displays the original signal `y` to the signal reconstructed from `z_compressed`."
-
-# ╔═╡ cf0dfcec-57ea-4a7b-919d-282ac1a721cf
-plot(discreteplot(y), discreteplot( zeros(N) )) #replace the zeros
-
-# ╔═╡ 8ad949b2-e90a-44f6-a19b-4165b2750ba4
-md"#### Showing that DCT-II and DCT-III are each other's inverses
-To show this result, we follow exercise 13.6 from *Computer Algebra*. Here we'll only give a sketch of the proof.
-
-**Exercise 13.6**: let ``f: \{0,1,\ldots,n-1\}\to\mathbb{R}`` be a discrete signal with period ``n``. Define
-
-```math
-g: \mathbb{Z}\to\mathbb{R}: \left\{ \begin{array}{ll}
-g(2j) = 0 & \text{for } j \in \{0,1,\ldots, 2n-1\}\\
-g(2j+1) = g(4n - 2j -1) = f(j) &\text{for } j\in \{0,1,\ldots, n-1\}
-\end{array}\right.
-```
-
-Now show the following properties:
-
-1) Show that the DFT of ``g``, ``\widehat{g}``, is a ``\mathbb{R}``-valued function with
-    1) ``4n``-periodicity
-
-    2) ``\widehat{g}(k) = \widehat{g}(4n-k) = -\widehat{g}(2n+k) = -\widehat{g}(2n-k)``
-
-2) Show that ``\forall j \in \{0,1,\ldots, n-1\}``
-
-```math
-f(j) = g(2j + 1) = \frac{1}{n}\left(\frac{\widehat{g}(0)}{2} + \sum_{k=1}^{n-1}\widehat{g}(k)\cos\left(\frac{\pi k (2j + 1)}{2n}\right)\right)
-```
-
-3) Conclude that DCT-II and DCT-III are each other's inverses.
-
-"
-
-
-# ╔═╡ ff00db16-f8ee-4976-9619-2506b05f0d14
-md"**Solution 13.6 (1)**:
-The ``4n``-periodicity follows from the equation
-```math
-\begin{align*}
-\widehat{g}(k) &= \sum^{4n - 1}_{j=0} g(j) \exp\left(\frac{-2\pi ijk}{4n}\right)\\
-&= \ldots\\
-&= 2\sum_{j=0}^{n-1} f(j) \cos\left(\frac{\pi k(2j + 1)}{2n}\right)
-\end{align*}
-```
-The other properties follow too from the previous equation and from special properties of the cosine function.
-
-"
-
-# ╔═╡ 5382cc72-3d67-40d3-80d8-1ecd7959e3d8
-md"**Solution 13.6 (2)**:
-Set ``\omega = \exp\left(\frac{2\pi i}{4n}\right)``, then
-```math
-\begin{align*}
-4nf(j) &= 4ng(2j+1)\\
-&= \ldots \\
-&= \sum_{k=0}^{4n-1} \widehat{g}(k)\omega^{(2j+1)k}\\
-&= \ldots \\
-&= 2\widehat{g}(0) + 4 \sum_{k=1}^{n-1} \widehat{g}(k)\cos\left(\frac{2\pi k(2j+1)}{4n}\right)
-\end{align*}
-```
-
-"
-
-# ╔═╡ 148934fb-1996-424e-8b0c-3a5a4646060f
-md"#### 2D DCT
-Analogous to 1D signals, 2D signals too can be constructed from basis vectors. For example, ``2\times 2`` images can be constructed from the *standard* basis
-```math
-\left\{ \left[\begin{array}{cc} 1 & 0\\ 0&0\end{array}\right], \left[\begin{array}{cc} 0 & 1\\ 0&0\end{array}\right],\left[\begin{array}{cc} 0 & 0\\ 1&0\end{array}\right],\left[\begin{array}{cc} 0 & 0\\ 0&1\end{array}\right] \right\}
-```
-The JPEG standard uses the same idea we previously illustrated on 1D signals on 2D signals. It does so by using the the 2D DCT on ``8\times 8`` sub-patches of images, and compressing each individual patch.
-"
-
-
-# ╔═╡ e6105acc-5fa6-453f-9b8e-c7e31d6834b6
-md"
-The forward 2D DCT is given by 
-```math
-F(u,v) = \frac{1}{4} k_u k_v \sum_{x=0}^7 \sum_{y=0}^7 f(x,y) \cos\left(\frac{(2x+1)u\pi}{16}\right)\cos\left(\frac{(2y+1)v\pi}{16}\right)
-```
-where ``u,v = 0,1,\ldots,7``.
-
-The inverse 2D DCT is given by
-```math
-f(x,y) = \frac{1}{4}\sum_{u=0}^7\sum_{v=0}^7 k_u k_v F(u,v) \cos\left(\frac{(2x+1)u\pi}{16}\right)\cos\left(\frac{(2y+1)v\pi}{16}\right)
-```
-where ``x,y = 0,1,\ldots,7``.
-
-Let's immediately implement these the `fDCT` and the `iDCT`. Keep in mind that Julia Arrays are indexed from 1 to ``n``.
-"
-
-# ╔═╡ a09f9366-212f-422c-87b6-122a2df65e9b
-function fDCT(f::AbstractMatrix)
-	return zeros(N, N) #exercise: replace
-end
-
-# ╔═╡ 2f8ec2f9-d898-4aed-8fa6-8da92c16ebe2
-function iDCT(F::AbstractMatrix)
-	return zeros(N, N) #exercise: replace
-end
-
-# ╔═╡ bb5ff4d0-854b-4297-a887-9062ad6c1a9e
-begin
-	function showimage(img::AbstractMatrix)
-		return Gray.( img ./ 255)
-	end
-	
-	function showmatrix(matr::AbstractMatrix)
-		m = minimum(matr)
-		M = maximum(matr)
-		
-		return @. Gray( (matr - m) / (M - m) )
-	end
-	
-	uint8(x::Gray{N0f8})::UInt8 = reinterpret(UInt8, gray(x))
-	
-	int(x::Gray{N0f8})::Int = convert(Int, uint8(x))
-	
-	ape = int.(mandrill_gray)
-	
-	ape_8x8 = ape[100:107, 100:107]
-	
-	#quantization table:
-	Q_table = [
-		16 11 10 16 24  40  51  61;
-		12 12 14 19 26  58  60  55;
-		14 13 16 24 40  57  69  56;
-		14 17 22 29 51  87  80  62;
-		18 22 37 56 68  109 103 77;
-		24 35 55 64 81  104 113 92;
-		49 64 78 87 103 121 120 101;
-		72 92 95 98 112 100 103 99;
-		];
-
-	#Test image from JPEG standard document for verification
-	test_snippet = 
-	[139 144 149 153 155 155 155 155;
-	144 151 153 156 159 156 156 156;
-	150 155 160 163 158 156 156 156;
-	159 161 162 160 160 159 159 159;
-	159 160 161 162 162 155 155 155;
-	161 161 161 161 160 157 157 157;
-	162 162 161 163 162 157 157 157;
-	162 162 161 161 163 158 158 158];
-	
-md"""In the remainder of this section, we will recreate our results of the 1D case in 2D. In order to free you of the burden of technicalities, this cell  defines some convenience functions and variables behind the scenes. They will be introduced at the appropriate times.
-"""
-end
-
-# ╔═╡ 0a95216c-7067-41f9-bc4f-21131621dca7
-md"First, let's create 2D basis functions as we did in the 1D case. For ``8\times 8`` images, the (standard) basis consists of 64 basis images/vectors, numbered 1 through 64. Complete the following function. Note that you can index matrices with a single index. "
-
-# ╔═╡ c1a08b76-6049-49db-96f1-cfaa69ca9c99
-function basisimage(n::Int)
-	u = zeros(N, N)
-	#exercise: complete this function
-	return u
-end
-
-# ╔═╡ ef704eb3-8822-4894-83d2-db4087a96301
-md"The next cell tests your implementation"
-
-# ╔═╡ 55fc2fd1-769a-4ec4-bd24-8976198440e0
-basisimage(10)
-
-# ╔═╡ d57511ea-a62c-4a46-9a6a-22bf3123d76b
-md"The `showmatrix` function rescales *arbitrary* matrices to a displayable range. Take for example a `` 4\times 4`` `randn` matrix, which has values ranging from e.g. -3 to +3 (depending on randomness of course):"
-
-# ╔═╡ dec56ad0-58e9-456e-a75d-090865149dbb
-randn_test = randn(4,4)
-
-# ╔═╡ 0a7d25d5-340e-45be-a1be-abb1cbf6ef36
-showmatrix(randn_test)
-
-# ╔═╡ 30d219a6-f259-477d-b532-70ac0a0baa7e
-md"This means you can also use `showmatrix` to display your `basisimage` matrices in a more visually pleazing manner."
-
-# ╔═╡ 13fd6c8d-ebb4-42a4-8b91-a15d750e5de7
-#exercise: use showmatrix in combination with basisimage
-
-# ╔═╡ fe9587bb-3683-420e-bb16-8bdb9db82fc3
-md"The next cell will visualize `baseimage(1)` to `baseimage(64)` in a grid pattern, allowing you to verify the correctness of your implementation."
-
-# ╔═╡ 5a2a34e8-4447-4a02-b9a5-f3edcea0a51e
-[showmatrix(basisimage(8*i + j + 1)) for i=0:7, j=0:7]
-
-# ╔═╡ bac76ace-6cc5-4488-9ac2-d6a91167504a
-md"As an exercise, modify the code used to generate the basisimages above to show the 2D DCT basis just like we did in the 1D case."
-
-# ╔═╡ ff264ac0-aaeb-4992-acfa-0ebad0edf7a5
-md"Before you try the entire grid, try to visualize a single DCT basis image."
-
-# ╔═╡ 2f81e240-e0b5-4442-b855-0b21c5e15993
-#single image
-10 |> basisimage |> iDCT |> showmatrix
-
-#this is Julia's pipe syntax, alternatively write:
-#showmatrix(iDCT(basisimage(10)))
-
-# ╔═╡ 71503507-8270-4162-bf03-09c7edc1dd4e
-md"If that works you can try the entire grid:"
-
-# ╔═╡ d5a73aac-eff1-4040-a7c3-9b0f254d8391
-#exercise: entire grid (HINT: modify the code from the previous grid)
-
-# ╔═╡ 1a06a96a-6324-40de-bec1-0189bf90a543
-md"Let's try to use our DCT functions on an ``8\times 8`` image."
-
-# ╔═╡ b456a6a1-230f-493b-94e5-a89849ed3449
-md"The variable `ape_8x8` contains an ``8\times 8`` subsample of the mandrill image."
-
-# ╔═╡ bb7a7573-ee76-425f-b6ec-7a5a463b9b9d
-ape_8x8
-
-# ╔═╡ 5ce72eab-faf7-4403-856b-675e7a2de675
-md"You can also visualize it using the `showimage` function."
-
-# ╔═╡ 9a07d873-a1ab-4d8d-8c13-3cf1c51ad29e
-showimage(ape_8x8)
-
-# ╔═╡ 7fb8fddb-85d5-4b59-800b-29d0b6333b6f
-md"Now we compute the forward DCT transform of `ape_8x8`"
-
-# ╔═╡ 9f01466c-94c1-4352-a449-56d06ed61fb1
-F_ape_8x8 = fDCT(ape_8x8)
-
-# ╔═╡ 8de75a30-40cd-4632-a52f-361ac7c3beca
-md"This yields an ``8\times 8`` matrix. Next we set all entries smaller than a certain threshold to zero."
-
-# ╔═╡ 5f82b60e-bd01-4af3-a293-8b8b96bac45d
-threshold = 20
-
-# ╔═╡ 69c459d0-e627-4ddb-b3c3-a4c971a8c383
-F_ape_8x8_compressed = [abs(F) < threshold ? 0.0 : F for F in F_ape_8x8]
-
-# ╔═╡ 1a92c635-f369-490e-afbf-5b38bd41cb79
-md"We reconstruct the image with the compressed DCT coefficients (and we round to integers)."
-
-# ╔═╡ 31e59ae6-0ad5-4937-a6e3-d7efb79a4051
-ape_8x8_reconstructed = round.(Int, iDCT(F_ape_8x8_compressed))
-
-# ╔═╡ 2356b679-cc2e-45cd-bb4f-8929c14d3942
-md"Finally, we visually inspect the images (original: left, reconstructed: right)."
-
-# ╔═╡ a01926fa-fc32-44dc-9c38-00cfb27b9d38
-[showimage(ape_8x8), showimage(ape_8x8_reconstructed)]
-
-# ╔═╡ 6d42670a-1046-47b4-a8cb-bb8ff35f16e9
-md"The JPEG algorithm works in a similar way, except for the thresholding. Instead of thresholding, quantization is used."
-
-# ╔═╡ 13cea041-fb29-455d-b5d7-72fdef4d3cbe
-md"#### Quantization
-Given DCT coefficients ``F`` (an ``8\times 8`` matrix) and a *quantization table* ``Q``, we compute the quantized version of ``F``, ``F^Q(u,v)``, according to the following formula:
-
-```math
-F^Q(u,v) = \left\lfloor\frac{F(u,v)}{Q(u,v)} + \frac{1}{2}\right\rfloor
-```
-
-Dequantizing ``F^Q`` is done by a simple multiplication:
-```math
-F'(u,v) = F^Q(u,v) * Q(u,v)
-```
-
-"
-
-# ╔═╡ f679a00d-cb26-40e2-ac57-a9b66dd448a2
-md"A quantization table has to be provide by the person encoding the image and stored as meta-data within a JPEG file. Programs such as Photoshop define their own quantization tables. 
-
-In the paper that describes the JPEG standard, the following quantization table, `Q_table`, is used to demonstrate the algorithm:"
-
-# ╔═╡ ee1ff74a-54a7-4952-8dce-47889df3119f
-Q_table
-
-# ╔═╡ f3528adc-0956-41f7-b796-19d6d92c7098
-md"Notice how the low-frequency basis vectors (left upper corner) are quantized less sharply than the high-frequency basis vectors (right lower corner). This is because the human eye is more sensitive to compression/quantization in the low-frequency coefficients.
-
-Let's implement our own `quantize` and `dequantize` functions. You can use `round(Int, x)` to round a number x and convert it to an `Int`. You can use `floor.(Int, X)` to round an entire matrix."
-
-# ╔═╡ 86263d1a-a12d-45ba-b86f-7b9ad8c21dc6
-function quantize(F::AbstractMatrix, Q::AbstractMatrix)
-	return F #exercise: implement correctly
-end
-
-# ╔═╡ e879c414-3d15-492a-b7d9-a903918f6f65
-function dequantize(FQ::AbstractMatrix, Q::AbstractMatrix)
-	return FQ #exercise: implement correctly
-end
-
-# ╔═╡ bab971b7-1bf5-4598-8dde-e68ac01a849e
-md"Instead of thresholding `F_ape_8x8` like we did earlier, let's try to quantize it this time. Store the result in `F_ape_8x8_Q`."
-
-# ╔═╡ 65c94021-1109-4c6d-994f-52ef441a527f
-#quantize F_ape_8x8
-F_ape_8x8_Q  = 0
-
-# ╔═╡ 7c817342-0139-4e95-831b-502b3e0d26e3
-md"Now dequantize `F_ape_8x8_Q` and store the result in `F_ape_8x8_dQ`. Compare it to `F_ape_8x8`, the variable you are trying to compress."
-
-# ╔═╡ 89f19fec-c049-4829-a991-218f58696ea9
-#dequantize ape_8x8_Q
-F_ape_8x8_dQ = 0
-
-# ╔═╡ f1fdb1f9-0d20-4c6a-9c0b-927d19d5405e
-F_ape_8x8
-
-# ╔═╡ 8a4b5232-1514-4bdc-903c-71f60c6a509f
-md"Then finally, reconstruct the image from `F_ape_8x8_dQ`. (You don't have to round the final result, the `showimage` function takes care of that.)"
-
-# ╔═╡ 4acb726f-e4e4-436c-8195-990407038cf4
-[showimage(ape_8x8), showimage(iDCT(F_ape_8x8_dQ))]
-
-# ╔═╡ 1709e9d6-99f1-420c-96d8-bfa91f45935f
-md"#### Huffman trees
-
-To compress the quantized DCT coefficients, a Huffman tree is used. Huffman trees will not be explained in this notebook. 
-
-We will not implement the huffman functions here."
-
-# ╔═╡ 1cb0d614-6c98-48e4-9828-9cec4cbcfc80
-function huffman(x) #returns huffman tree
-	return x
-end
-
-# ╔═╡ 0a36a17d-7e4c-4cd6-9127-4caafe37e701
-function dehuffman(huffmantree) #decodes huffman tree and returns image
-	return huffmantree
-end
-
-# ╔═╡ e8cd9018-3ca4-45c9-80ad-abba24f59092
-begin
-	crappy_pdf_copy(x) = copy(reshape(x, (8,8))')
-	jpeg_test = [139
-144
-149
-153
-155
-155
-155
-155
-144
-151
-153
-156
-159
-156
-156
-156
-150
-155
-160
-163
-158
-156
-156
-156
-159
-161
-162
-160
-160
-159
-159
-159
-159
-160
-161
-162
-162
-155
-155
-155
-161
-161
-161
-161
-160
-157
-157
-157
-162
-162
-161
-163
-162
-157
-157
-157
-162
-162
-161
-161
-163
-158
-158
-158] |> crappy_pdf_copy
-	
-	solution_jpeg_test_fdct = [235.6
--1.0
--12.1
--5.2
-2.1
--1.7
--2.7
-1.3
--22.6
--17.5
--6.2
--3.2
--2.9
--0.1
-0.4
--1.2
--10.9
--9.3
--1.6
-1.5
-0.2
--0.9
--0.6
--0.1
--7.1
--1.9
-0.2
-1.5
-0.9
--0.1
-0
-0.3
--0.6
--0.8
-1.5
-1.6
--0.1
--0.7
-0.6
-1.3
-1.8
--0.2
-1.6
--0.3
--0.8
-1.5
-1.0
--1.0
--1.3
--0.4
--0.3
--1.5
--0.5
-1.7
-1.1
--0.8
--2.6
-1.6
--3.8
--1.8
-1.9
-1.2
--0.6
--0.4] |> crappy_pdf_copy
-	
-		solution_jpeg_test_q = [15
-0
--1
-0
-0
-0
-0
-0
--2
--1
-0
-0
-0
-0
-0
-0
--1
--1
-0
-0
-0
-0
-0
-0
--1
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0] |> crappy_pdf_copy
-	
-	solution_jpeg_test_dq = [240
-0
--10
-0
-0
-0
-0
-0
--24
--12
-0
-0
-0
-0
-0
-0
--14
--13
-0
-0
-0
-0
-0
-0
--14
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0
-0] |> crappy_pdf_copy
-	
-	solution_jpeg_test_rec = [142
-144
-147
-150
-152
-153
-154
-154
-149
-150
-153
-155
-156
-157
-156
-156
-157
-158
-159
-161
-161
-160
-159
-158
-162
-162
-163
-163
-162
-160
-158
-157
-162
-162
-162
-162
-161
-158
-156
-155
-160
-161
-161
-161
-160
-158
-156
-154
-160
-160
-161
-162
-161
-160
-158
-157
-160
-161
-163
-164
-164
-163
-161
-160] |> crappy_pdf_copy
-	
-
-	
-	
-	md"""#### JPEG on ``8\times 8`` block
-
-Summary:
-
-`img -> img - 128 -> fDCT -> Quantize -> Huffmann -> save `
-
-`load -> de-Huffmann -> Dequantize -> iDCT -> img' + 128 -> img'`
-
-Let's apply this on the ``8\times 8`` `jpeg_test` image. This same patch is also used in the paper that describes the JPEG standard. 
-	
-	Complete the following cells to execute the JPEG algorithm. The correct (but rounded) outputs are defined behind the scenes so that you can compare them, `solution_jpeg_test_[x]`, with your solution `jpeg_test_[x]`.
-
-"""
-end
-
-# ╔═╡ 5269f2a7-497f-41d4-b44d-472555d07d47
-jpeg_test
-
-# ╔═╡ 2614f4f5-948f-44c7-aa21-99e5770c95d9
-jpeg_test_fdct = 0
-
-# ╔═╡ a7ac9dd8-7266-464a-aa64-58e53011e386
-jpeg_test_q = 0
-
-# ╔═╡ 12b5561c-380b-4977-9bfa-872d1724e522
-jpeg_test_huffman = 0; #keep the ; to suppress output
-
-# ╔═╡ f58c38ec-e016-4cd6-a569-0945ab5bb66a
-jpeg_test_dehuffman = 0;
-
-# ╔═╡ 516d5b58-ead5-4486-b858-dbca430afe5a
-jpeg_test_dq = 0
-
-# ╔═╡ 446ffc52-c905-4dc6-bbde-cd3d17df9211
-jpeg_test_rec = 0
-
-# ╔═╡ 1883f6ea-048d-4833-8ab2-523c66c5f2e0
-md"""#### JPEG on an entire image
-To be able to reuse our functions that operate on ``8\times 8`` subimages, we are provided with the function `apply_on_sub(f::Function, input::Matrix)` which applies the function `f` on all the ``8\times 8`` subimages of the `input` image."""
-
-# ╔═╡ 017ef853-3b84-44b7-90d9-0111aebd0d13
-function apply_on_sub(f::Function, input::Matrix, blocksize::Int = 8)
-	output = similar(input, Float64)
-	
-	for j=1:blocksize:size(input,2) 
-		for i=1:blocksize:size(input,1)
-			output[i:i+blocksize-1, j:j+blocksize-1] .= 
-								f(input[i:i+blocksize-1, j:j+blocksize-1])
-		end
-	end
-	
-	return output
-end
-
-# ╔═╡ 7a2c0a9a-e403-4c8c-9acd-514a27df3500
-md"To demonstrate the usage of this function, we define a test image `subimg_test`, consisting of two ``2\times 2`` blocks (instead of two ``8\times 8`` for convenience). We then define the function `sub_func`, which takes a subimage as input and outputs that subimage with the minimum of the subimage added to every entry.
-
-This means the left half will be reduced by 1, while the right half will be increased by 2."
-
-# ╔═╡ 06d04c0e-2e10-4589-81be-23345901fcf9
-subimg_test = [1 -1 2 2;
-			  -1  1 2 2]
-
-# ╔═╡ 452cabc2-2e01-4b03-9643-24da8dcca6a3
-function sub_func(x::AbstractMatrix)
-	m = minimum(x)
-	
-	return x .+ m
-end
-
-# ╔═╡ 4a6cc610-72aa-4286-9168-875612ff5cf4
-apply_on_sub(sub_func, subimg_test, 2)
-
-# ╔═╡ 84956860-b04d-4796-b70d-eb0edf95b5a1
-md"We of course want to use this `apply_on_sub` function to reuse our previous functions. Let's go through a full application of the JPEG algorithm."
-
-# ╔═╡ 9be09d6f-d809-47a1-9965-5ff67a28cc20
-md"First, pick a quantization table. By default we will just copy `Q_table` from before. You are encouraged to come up with your own quantization tables or to look for some on the internet."
-
-# ╔═╡ 0ac14389-984d-41d4-aa52-6cef371cea12
-Q = copy(Q_table);
-
-# ╔═╡ 43ed78d2-05dc-449f-becc-480f2bb7e325
-md"Then we begin the algorithm as described in the summary in the previous section."
-
-# ╔═╡ df78b4cb-25a1-41a5-9dce-251f827bd246
-ape
-
-# ╔═╡ 77505144-d848-4f92-94c5-e5ea2c79fc07
-ape_minus = ape .- 128
-
-# ╔═╡ 8203fe7b-a13b-428f-840b-c23bad4284ba
-ape_fdct = apply_on_sub(fDCT, ape_minus)
-
-# ╔═╡ d9115c01-c6ab-4644-b3c8-4bf90b07e86f
-ape_q = apply_on_sub(x -> quantize(x, Q), ape_fdct)
-
-# ╔═╡ 7dc3fffc-d496-45c9-8b8c-7b4234f87447
-ape_huff = apply_on_sub(huffman, ape_q); # == ape_q
-
-# ╔═╡ f2510015-1e19-4ddb-842a-1eb429a01fda
-#save to disk
-
-# ╔═╡ a92dcb63-1811-4156-923d-f66e7a2d1f37
-#load from disk
-
-# ╔═╡ e1e0ca42-4556-4fa4-a3e2-475ae23be2cf
-ape_dehuff = apply_on_sub(dehuffman, ape_huff); # == ape_q still
-
-# ╔═╡ bfcefce3-5c1c-4827-bf9f-dff9c191696b
-ape_dq = apply_on_sub(x -> dequantize(x, Q), ape_dehuff)
-
-# ╔═╡ 82a30cb2-5baf-4a52-a560-600169fe1e93
-ape_idct = apply_on_sub(idct, ape_dq)
-
-# ╔═╡ ee4a064f-4427-49c5-a504-4e4b32049398
-ape_reconstructed = round.(Int, ape_idct .+ 128)
-
-# ╔═╡ 4b6ca085-454d-4021-be20-410201593886
-showimage(ape_reconstructed)
-
-# ╔═╡ 2d8bf94e-5109-41fb-9ac0-922efd21829a
-md"Now try multiplying `Q_table` to increase or decrease the compression rate."
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
 
 [compat]
-FFTW = "~1.4.3"
 Images = "~0.24.1"
 Plots = "~1.20.1"
 PlutoUI = "~0.7.9"
-StaticArrays = "~1.2.12"
-TestImages = "~1.6.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -1819,9 +680,9 @@ version = "3.14.0"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "32a2b8af383f11cbb65803883837a149d10dfe8a"
+git-tree-sha1 = "024fe24d83e4a5bf5fc80501a314ce0d1aa35597"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.10.12"
+version = "0.11.0"
 
 [[ColorVectorSpace]]
 deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "SpecialFunctions", "Statistics", "TensorCore"]
@@ -2015,9 +876,9 @@ version = "0.58.1+0"
 
 [[GeometryBasics]]
 deps = ["EarCut_jll", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
-git-tree-sha1 = "15ff9a14b9e1218958d3530cc288cf31465d9ae2"
+git-tree-sha1 = "58bcdf5ebc057b085e58d95c138725628dd7453c"
 uuid = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
-version = "0.3.13"
+version = "0.4.1"
 
 [[Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -2667,12 +1528,6 @@ git-tree-sha1 = "fed1ec1e65749c4d96fc20dd13bea72b55457e62"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.9"
 
-[[StringDistances]]
-deps = ["Distances"]
-git-tree-sha1 = "a4c05337dfe6c4963253939d2acbdfa5946e8e31"
-uuid = "88034a9c-02f8-509d-84a9-84ec65e18404"
-version = "0.10.0"
-
 [[StructArrays]]
 deps = ["Adapt", "DataAPI", "StaticArrays", "Tables"]
 git-tree-sha1 = "000e168f5cc9aded17b6999a560b7c11dda69095"
@@ -2713,12 +1568,6 @@ version = "0.1.1"
 [[Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[[TestImages]]
-deps = ["AxisArrays", "ColorTypes", "FileIO", "OffsetArrays", "Pkg", "StringDistances"]
-git-tree-sha1 = "db28237376a6b7ae9c9fe05880ece0ab8bb90b75"
-uuid = "5e47fb64-e119-507b-a336-dd2b206d9990"
-version = "1.6.1"
 
 [[TiffImages]]
 deps = ["ColorTypes", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "OffsetArrays", "OrderedCollections", "PkgVersion", "ProgressMeter"]
@@ -2967,258 +1816,115 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╠═0a05e850-cb9f-11eb-39cb-3d183bb8d5a9
-# ╟─daac555d-0d99-4cc2-9ee1-b5317d52aad9
-# ╟─c45c4844-801f-43f5-b62c-ee7b30439b91
-# ╠═7b2079a5-70bd-4efa-9317-c64f062eaae7
-# ╟─c8634d32-c113-4a42-954e-1ab5340562e5
-# ╟─d63b3c97-8ed0-4cd4-b632-dd32d3180d17
-# ╠═1defdc63-e4b3-4ec6-8369-7cd67e957bd4
-# ╟─2474a164-147d-48dd-8f77-88e082756d0f
-# ╠═3641ea76-46bb-409b-ad7f-a29d955127d4
-# ╠═fafc1904-e1f9-4912-ba4e-c27117ba5677
-# ╠═713299aa-54e1-4462-ae59-49605e6e0e90
-# ╠═bb3748af-d88e-4a81-bec5-75352c617f7a
-# ╟─32f5495e-0b87-47aa-9fd5-34e18a489e28
-# ╠═def23802-a9be-4f25-a06b-24eed090f2ab
-# ╠═52c51b6b-29a8-44b2-8638-821462d5264c
-# ╠═f90fba79-795b-4285-8b19-444c63a9a34c
-# ╠═f53226ee-88b7-48bc-b96f-5c98cb91b179
-# ╠═222b0e84-cc4a-4fbb-8b89-2f5e24ee811b
-# ╠═79b1efb8-3fea-4e86-92da-517cdac28773
-# ╠═72db5304-0ef0-4d56-9424-2465868f6863
-# ╠═8b54df1e-a7fd-4da4-97ed-90349cd27e84
-# ╠═a9426949-cf67-4415-923e-318663e4a753
-# ╠═ad1b44a6-65b9-4a2a-b32b-d9f83d45cd3b
-# ╠═4712f8dd-5a2f-4a5f-81c3-e275f05ce97a
-# ╠═ac45accd-da73-4c7e-8daa-398cc15c2caf
-# ╠═69537a5a-f0bd-40d7-a681-9a908cb4c883
-# ╟─95f5eac2-ff17-4eaa-b8e6-b16c13b18b8d
-# ╠═330b067f-99b6-453b-8ef8-6d6cfa29c541
-# ╠═ed035485-6c4d-4b6e-ab69-4d5010b5399f
-# ╠═cc0c6b8b-2552-40ac-a6d8-e0e73d94a631
-# ╠═ffc6fd00-90a8-4683-9a2a-0f08e6979b8d
-# ╠═be219366-ae51-4a34-bf94-96e4fe942dfc
-# ╠═63ac8a21-1a07-4708-b54c-f9efb279414a
-# ╠═5ee06623-5d13-4a5e-b72e-0fc7c983883d
-# ╠═95b4b482-dd40-420a-a9f2-9a0f377f9db8
-# ╠═7da385e0-c032-4110-926c-44a2b657a2d3
-# ╠═bf4260a4-ca5d-418b-985b-515898817320
-# ╠═47017d5e-aad4-41f4-b9c8-533721784646
-# ╠═5a5b2db1-ba56-47c2-b5ce-f7647d10016e
-# ╠═d3c1e945-17d9-4a07-8805-242c898ea2d6
-# ╠═8954bb72-0421-4073-9a67-4ef12259b760
-# ╟─3d83ac25-23d2-48d8-bdcd-5b76e4210a21
-# ╠═b59b26a9-62b2-4a73-aa98-933d42a9d2ca
-# ╠═97af0d61-0c4b-4d6b-8fc4-7ec2c067d5a9
-# ╟─8643dfe4-16d1-4f3e-872f-de97b07e1944
-# ╠═349db48e-c1e0-42a2-838d-db5267cadc3d
-# ╟─505a5eac-f0be-4969-889b-97f5ffc406da
-# ╠═1b6ffe16-7b63-41c1-84c8-87aabe51badc
-# ╟─268cfedb-e3a2-4bdf-9173-5395bb618b37
-# ╠═039d1246-2189-42d7-859b-1f0358a3ed3c
-# ╠═85a68539-044e-4f8d-a065-7e747bde4c83
-# ╠═e1c506e9-bc39-4142-abec-5b7322528e70
-# ╟─70c3ea70-bace-47eb-84cf-b246ab300b23
-# ╠═f0259140-3167-4ad8-a1ae-f9c8d0d2d77c
-# ╠═05c9f15b-bfb3-43a5-ad6c-0a14f127b96d
-# ╟─754fddfe-2f2c-448c-9d8c-dec5d994408f
-# ╠═f1636d30-8527-467a-99b6-6eac97c59c61
-# ╟─6103db78-7b43-47dd-a1dd-4637c38b898b
-# ╠═5a9d52bf-11b0-40ca-946c-ed7248fbbf20
-# ╟─3f60a50a-aaab-401b-ae81-cacc347fc947
-# ╠═177870cf-677c-45e2-972a-d56b8ced29f0
-# ╟─7bb1bd36-6a51-4a41-b794-ed49ffeefef6
-# ╟─1005e439-e51e-4051-8dd8-627aff03dc17
-# ╠═fb31605e-fc08-4ec9-8872-cf47020b9701
-# ╠═518208c6-a179-40bf-819d-162871b2df71
-# ╟─2891c2f0-4a1f-4cad-b48e-b40e4c33b7c6
-# ╠═d7e8900e-64b1-4866-94bd-786b3af99d8d
-# ╟─d5774ec1-87ad-47d7-a1df-ba4c2ac4cbe2
-# ╟─086f76c4-5d9a-47d9-b3d2-1ae168e24a6c
-# ╟─17384aa0-7e76-44b3-931e-38099bd4ff6d
-# ╠═d9113067-8787-4a18-a5fc-9011a44a2173
-# ╟─1c94f4c3-38e7-48a1-8b5f-e15a821b0a4e
-# ╠═9a925811-bb2e-4b30-8521-a04d7b411820
-# ╟─bd915961-5602-465c-9c99-0623481a9272
-# ╠═0c8e29c3-d896-48db-986b-8bfc635b17be
-# ╟─93e518f1-47fe-48d8-990a-78eca8f2d4c3
-# ╠═e456f2fc-cae5-4c9a-91d2-b3184561606d
-# ╟─e4021a39-7e9f-479b-9d69-95447c6cc9dd
-# ╟─024e2a32-d4f2-4114-8968-bb7e31a9c8fd
-# ╟─f16510d8-3a13-4881-b83f-c41668f96c4d
-# ╠═4c6d074a-6564-4a45-bcf3-fb417e4d2ba1
-# ╟─1f09d825-e884-415d-a4c5-8ad62938c0ff
-# ╟─5a4ca684-0375-4a23-b480-b8ab4e2dc26e
-# ╠═34590bcf-5804-4e96-b869-3f9709475b43
-# ╟─8ba9d6ae-ad53-4191-b710-74549e039ab7
-# ╠═954d43cd-71f1-44b8-b073-ade1e74cdddb
-# ╟─960c07a7-9f4e-4a75-a1b4-e8bd27968312
-# ╟─483c2f13-53b4-4149-b517-91e25e9ce32f
-# ╠═65335b08-0a73-4e6e-9fcd-c734ac2689eb
-# ╟─57a8da57-cd62-4f23-823f-6832b0556d95
-# ╠═dd14c65f-f75c-4049-8b7d-1aced363128d
-# ╠═efbb1823-4544-4a38-8355-00c6ecc0ed15
-# ╠═e1c3e6e4-5c85-4b94-a46a-62a5c360d87c
-# ╠═de94e237-ac88-4af7-9a4a-edfdf472d05f
-# ╠═0af95729-e596-4382-ada7-0093fb909796
-# ╟─db3ed199-8efd-4e13-b361-54e1becebf7a
-# ╠═fba92f2c-e0a8-4a82-b063-811146ef09eb
-# ╠═1c34938a-a05b-4855-9744-e307cea8863b
-# ╟─8d21f297-5a7f-4640-bb8a-69b4e436168a
-# ╠═981bf301-5ad7-4b16-8a10-b1ce7449ff66
-# ╠═97f9aa49-1420-4b05-b0ea-46ffb439ad92
-# ╠═bb4f1863-2948-428c-8124-c3927dacbcc4
-# ╟─52935cae-f774-4298-be8c-b379ec1c1b7a
-# ╠═393ed59c-8cc3-48a8-9fed-ec44e15db10a
-# ╠═3754be18-d417-4d26-af28-7e8c1d7ab4cc
-# ╠═bb1b79d0-0c35-49c6-8e54-ca01e017a242
-# ╟─267b2b47-79a0-4488-9a86-90f86b3b4e2e
-# ╠═cab9e98f-5967-4fbc-bc6a-173912c5a05a
-# ╠═df6e7b9d-9c76-4447-aab8-2d427f063392
-# ╟─6d8c5631-55b0-4e98-b9cb-91bd33a7a32f
-# ╟─fd056009-de33-460a-8475-8e93d6e02d46
-# ╟─ea1994ed-a14e-4df9-b008-9eeefe69a831
-# ╠═4f6c5da3-3d86-46d9-8e4d-c3f254fbd90e
-# ╟─644db8e8-9c18-4ea5-be45-17935b807ad9
-# ╟─42bc98e0-14cd-4a9c-8c21-dd2c87273358
-# ╟─8a1a4d61-0619-41b7-b980-7099cfb779d0
-# ╟─2e96aab5-fc7a-4f2a-a2b4-ed27a9b7004b
-# ╟─5e359f41-d768-4cd7-afd6-5b98806ed9a4
-# ╠═1ce58807-094b-4576-8fd4-9281ec8bf90d
-# ╟─84c7d5f7-2ecc-414e-89b3-1a746c583eee
-# ╟─3ba49ed0-86f8-44d7-ad8c-919e18e39b3b
-# ╟─d043cadb-d0ac-4570-a669-56b4718a62ec
-# ╟─34e2cee3-583c-4f30-bef7-676d30b76935
-# ╟─892d5edb-f572-41f4-b328-4dc0a0adf8ed
-# ╠═e031b0fd-acc6-4552-93b5-ba6208848c6e
-# ╟─b8e78721-fab9-4e10-bcd4-a3e2fed3e4d6
-# ╠═34df0824-f264-4493-b7b4-0c9946d03310
-# ╟─e596f8c0-a7e7-4e92-99a8-3da11620aeab
-# ╟─f976fa97-08c9-4a87-90fd-3d757359a53b
-# ╟─c81c323f-3137-46e3-8b54-445a440f1cf9
-# ╠═460378ab-1322-4ce5-9b01-9d9c06144ab7
-# ╠═c8f59286-8f23-49b4-805a-810cc109ef17
-# ╟─7098bf12-c1b7-4f7b-bd3d-84fffe281b97
-# ╟─b9c5dbc2-780f-4fc6-aaeb-cb88dbd7de11
-# ╟─74721d26-66c3-44dc-a5a3-8cb8d0cb6f37
-# ╟─8876bdc8-2412-4879-a676-1dd9a49e8638
-# ╟─07c695be-89c9-492b-a714-4c89fce9b760
-# ╟─423360f8-8e0f-4495-bcc8-de1e84709ca6
-# ╠═a88ab303-225e-4bdc-8101-69dc6a204ebc
-# ╠═1b6f7894-d7ff-42e3-85c7-da52d561a680
-# ╟─c72da624-f8d7-4c12-b9f8-0485c7b27c09
-# ╠═6bfca45d-3c4e-4389-a370-f71afcac208b
-# ╟─d486cce7-275d-43d0-b27b-81ab27465314
-# ╠═c852ed69-1fd7-45a7-9950-903631c21e16
-# ╟─efb1196c-7724-4326-8874-db0cf14b99ff
-# ╠═fc9f2534-c2dd-4227-b38d-e255587ce633
-# ╠═3ef6afbe-ed53-4353-8c2a-38e500c5e98e
-# ╟─f174f359-4e4d-4bab-90fd-4c052ffafb45
-# ╠═497017ed-0b22-440e-b96f-23f860096a94
-# ╠═7ec184e2-2edd-4876-a5b5-99bfaf3231b9
-# ╟─a6efa895-cc01-415e-a498-76a013eb39dd
-# ╠═6273e361-bc33-46ac-a890-04c96bb009d1
-# ╟─61fa4793-654b-4640-b9d2-2d9d1aaf2e77
-# ╟─e41ba4f3-7411-4fde-83da-e3444402e95a
-# ╠═fdc75ff3-b0ca-428f-9d99-dd8a49d4b126
-# ╟─b1e13438-2afe-43e1-ac35-23812f06a2c7
-# ╠═c488d92d-86cc-49db-93e7-b17455710367
-# ╠═895ef22d-7090-47cd-a2a7-977296546b27
-# ╟─d47e0bc8-5d0a-44f0-8056-e83e32a4c691
-# ╠═fbb5eb67-5f84-4780-a3a2-40655234b424
-# ╠═e89cdd11-d0f6-4214-bf9c-91427424ab08
-# ╟─dd946660-e72c-439d-9aa1-e81af81c10dd
-# ╠═7c777379-5e50-4f68-a00c-b19b81543298
-# ╟─cdbf7a05-8e90-42bb-81b8-97596f885ae6
-# ╠═7f67164f-1a12-438c-b802-4efef9a97717
-# ╟─ab2d3a8e-55c4-480f-aa0c-5bc1656e9bd7
-# ╠═cf0dfcec-57ea-4a7b-919d-282ac1a721cf
-# ╟─8ad949b2-e90a-44f6-a19b-4165b2750ba4
-# ╟─ff00db16-f8ee-4976-9619-2506b05f0d14
-# ╟─5382cc72-3d67-40d3-80d8-1ecd7959e3d8
-# ╟─148934fb-1996-424e-8b0c-3a5a4646060f
-# ╟─e6105acc-5fa6-453f-9b8e-c7e31d6834b6
-# ╠═a09f9366-212f-422c-87b6-122a2df65e9b
-# ╠═2f8ec2f9-d898-4aed-8fa6-8da92c16ebe2
-# ╟─bb5ff4d0-854b-4297-a887-9062ad6c1a9e
-# ╟─0a95216c-7067-41f9-bc4f-21131621dca7
-# ╠═c1a08b76-6049-49db-96f1-cfaa69ca9c99
-# ╟─ef704eb3-8822-4894-83d2-db4087a96301
-# ╠═55fc2fd1-769a-4ec4-bd24-8976198440e0
-# ╟─d57511ea-a62c-4a46-9a6a-22bf3123d76b
-# ╠═dec56ad0-58e9-456e-a75d-090865149dbb
-# ╠═0a7d25d5-340e-45be-a1be-abb1cbf6ef36
-# ╟─30d219a6-f259-477d-b532-70ac0a0baa7e
-# ╠═13fd6c8d-ebb4-42a4-8b91-a15d750e5de7
-# ╟─fe9587bb-3683-420e-bb16-8bdb9db82fc3
-# ╠═5a2a34e8-4447-4a02-b9a5-f3edcea0a51e
-# ╟─bac76ace-6cc5-4488-9ac2-d6a91167504a
-# ╟─ff264ac0-aaeb-4992-acfa-0ebad0edf7a5
-# ╠═2f81e240-e0b5-4442-b855-0b21c5e15993
-# ╟─71503507-8270-4162-bf03-09c7edc1dd4e
-# ╠═d5a73aac-eff1-4040-a7c3-9b0f254d8391
-# ╟─1a06a96a-6324-40de-bec1-0189bf90a543
-# ╟─b456a6a1-230f-493b-94e5-a89849ed3449
-# ╠═bb7a7573-ee76-425f-b6ec-7a5a463b9b9d
-# ╟─5ce72eab-faf7-4403-856b-675e7a2de675
-# ╠═9a07d873-a1ab-4d8d-8c13-3cf1c51ad29e
-# ╟─7fb8fddb-85d5-4b59-800b-29d0b6333b6f
-# ╠═9f01466c-94c1-4352-a449-56d06ed61fb1
-# ╟─8de75a30-40cd-4632-a52f-361ac7c3beca
-# ╠═5f82b60e-bd01-4af3-a293-8b8b96bac45d
-# ╠═69c459d0-e627-4ddb-b3c3-a4c971a8c383
-# ╟─1a92c635-f369-490e-afbf-5b38bd41cb79
-# ╠═31e59ae6-0ad5-4937-a6e3-d7efb79a4051
-# ╟─2356b679-cc2e-45cd-bb4f-8929c14d3942
-# ╠═a01926fa-fc32-44dc-9c38-00cfb27b9d38
-# ╟─6d42670a-1046-47b4-a8cb-bb8ff35f16e9
-# ╟─13cea041-fb29-455d-b5d7-72fdef4d3cbe
-# ╟─f679a00d-cb26-40e2-ac57-a9b66dd448a2
-# ╠═ee1ff74a-54a7-4952-8dce-47889df3119f
-# ╟─f3528adc-0956-41f7-b796-19d6d92c7098
-# ╠═86263d1a-a12d-45ba-b86f-7b9ad8c21dc6
-# ╠═e879c414-3d15-492a-b7d9-a903918f6f65
-# ╟─bab971b7-1bf5-4598-8dde-e68ac01a849e
-# ╠═65c94021-1109-4c6d-994f-52ef441a527f
-# ╟─7c817342-0139-4e95-831b-502b3e0d26e3
-# ╠═89f19fec-c049-4829-a991-218f58696ea9
-# ╠═f1fdb1f9-0d20-4c6a-9c0b-927d19d5405e
-# ╟─8a4b5232-1514-4bdc-903c-71f60c6a509f
-# ╠═4acb726f-e4e4-436c-8195-990407038cf4
-# ╟─1709e9d6-99f1-420c-96d8-bfa91f45935f
-# ╠═1cb0d614-6c98-48e4-9828-9cec4cbcfc80
-# ╠═0a36a17d-7e4c-4cd6-9127-4caafe37e701
-# ╟─e8cd9018-3ca4-45c9-80ad-abba24f59092
-# ╠═5269f2a7-497f-41d4-b44d-472555d07d47
-# ╠═2614f4f5-948f-44c7-aa21-99e5770c95d9
-# ╠═a7ac9dd8-7266-464a-aa64-58e53011e386
-# ╠═12b5561c-380b-4977-9bfa-872d1724e522
-# ╠═f58c38ec-e016-4cd6-a569-0945ab5bb66a
-# ╠═516d5b58-ead5-4486-b858-dbca430afe5a
-# ╠═446ffc52-c905-4dc6-bbde-cd3d17df9211
-# ╟─1883f6ea-048d-4833-8ab2-523c66c5f2e0
-# ╟─017ef853-3b84-44b7-90d9-0111aebd0d13
-# ╟─7a2c0a9a-e403-4c8c-9acd-514a27df3500
-# ╠═06d04c0e-2e10-4589-81be-23345901fcf9
-# ╠═452cabc2-2e01-4b03-9643-24da8dcca6a3
-# ╠═4a6cc610-72aa-4286-9168-875612ff5cf4
-# ╟─84956860-b04d-4796-b70d-eb0edf95b5a1
-# ╟─9be09d6f-d809-47a1-9965-5ff67a28cc20
-# ╠═0ac14389-984d-41d4-aa52-6cef371cea12
-# ╟─43ed78d2-05dc-449f-becc-480f2bb7e325
-# ╠═df78b4cb-25a1-41a5-9dce-251f827bd246
-# ╠═77505144-d848-4f92-94c5-e5ea2c79fc07
-# ╠═8203fe7b-a13b-428f-840b-c23bad4284ba
-# ╠═d9115c01-c6ab-4644-b3c8-4bf90b07e86f
-# ╠═7dc3fffc-d496-45c9-8b8c-7b4234f87447
-# ╠═f2510015-1e19-4ddb-842a-1eb429a01fda
-# ╠═a92dcb63-1811-4156-923d-f66e7a2d1f37
-# ╠═e1e0ca42-4556-4fa4-a3e2-475ae23be2cf
-# ╠═bfcefce3-5c1c-4827-bf9f-dff9c191696b
-# ╠═82a30cb2-5baf-4a52-a560-600169fe1e93
-# ╠═ee4a064f-4427-49c5-a504-4e4b32049398
-# ╠═4b6ca085-454d-4021-be20-410201593886
-# ╟─2d8bf94e-5109-41fb-9ac0-922efd21829a
+# ╟─04f64cf1-0dd5-4a81-91f7-01cd4f71277f
+# ╟─bbd301c3-c918-4698-ac89-66f0dc971e6d
+# ╟─c7e44bab-bf81-40d7-97bc-967d16ca3c53
+# ╠═2f197e3a-7d64-4a26-a9eb-6fcbc0965c10
+# ╟─888db76b-fad6-4f1c-8000-b04a553b190a
+# ╟─cac3127e-a50a-4e73-acbf-33fe1113690c
+# ╠═4ced03dd-ffc9-4f34-8111-926088c8ea30
+# ╟─49ccc68d-2ee1-413e-a0f9-761492ec294d
+# ╠═f4b22329-b72b-4bd2-a3c0-6c60764c0123
+# ╠═3a5a8e5f-93eb-4943-a51e-6bb751c91f06
+# ╠═55f5374f-4062-4389-9764-2b4ffa4f5740
+# ╠═82c15347-d499-4b5d-a7dd-7e50c36632c1
+# ╟─2aa1a20f-699e-483f-8698-92c0fede510e
+# ╠═154ef61f-ddd2-45e8-aeea-2867af07ea21
+# ╠═b0a1c2fd-f350-40c3-b680-113a47a90216
+# ╠═3028a080-5ffa-4e44-9edf-f58f945adcd6
+# ╠═e2cf1bc5-3ea1-4f78-b48d-353bf0816bd9
+# ╠═05b4d79d-c6b8-4548-b09d-d448f3b1ee37
+# ╠═f4df16e0-a1fd-4b30-8df4-ec4ac72bce42
+# ╠═e0f95a40-c8f0-42af-a3cc-f9e2583f788e
+# ╠═b4bf2537-6c7e-4383-bc1b-839ca7ae4ee3
+# ╠═cf294c1e-fc17-4d96-8a14-b9be0f604d26
+# ╠═98868a6e-22e9-4f3b-9af2-a684fea55d03
+# ╠═506e98ce-4e35-4294-a06d-d1a6585779ad
+# ╠═3dc11c07-483d-4981-8317-14e0ae077cb7
+# ╠═18d8d7e5-e517-4fb9-bf52-9711645ec86b
+# ╟─890e0cf9-6c9e-4ed3-bd17-c35ac0352f5f
+# ╠═5db1d177-f376-4111-a9ab-d250a7f87ba1
+# ╠═79424ae0-8e2e-4f85-aa5f-e30a9aedfa4c
+# ╠═d8aa5b7c-76d8-4f61-809c-1b45410f7472
+# ╠═a8db4a27-bcb9-43f3-b85e-9544c63829f6
+# ╠═91c1ad84-2ce5-4d0f-ab78-54f732fba609
+# ╠═a52df092-bf28-447e-b6dd-1e4fc122021b
+# ╠═4f0f6f57-eb63-490b-9f01-5aee61358a3a
+# ╠═b03b6b1c-8f17-46cf-a90a-e8d92dbc05a1
+# ╠═11d947e9-a55d-4392-92c7-5840a0f46fd5
+# ╠═8b1cea13-a02f-4b06-8dd6-b0f5f02a7840
+# ╠═e89b2b4a-d1a2-4bce-bdcd-354690b3f36f
+# ╠═b556bbd3-3c0e-4897-93a5-7dd1a4d8a3a2
+# ╠═c2bc4183-7d23-4485-a2e8-c991b8c4a1f9
+# ╠═8cda889a-868e-4bbc-9d91-56d494fa73fa
+# ╟─5f50d324-c906-40e8-b67e-edd0a07a58b1
+# ╠═cfe065ca-b6c9-4c78-aa97-d6fb170302cf
+# ╠═93a0bdf1-4296-4a3d-a81b-e0a4c1e4e6a1
+# ╟─33a7220a-3d1b-49ee-b7b1-f705b5bc90fa
+# ╠═e8068e83-baa9-4a60-8128-9e997fa04eb6
+# ╟─a065ff8e-162a-4fec-829f-aea530bb299c
+# ╠═b4ed7228-da36-4846-ab6b-e8d935de6b7d
+# ╟─9f8c7622-b8ab-49e9-be84-bb5dd2738fca
+# ╠═3f511a39-0417-40e0-9e4b-80266578c7f3
+# ╠═df9a51a1-80db-437a-b9df-7da4c886b1ce
+# ╠═06eba15a-5f14-4082-aa5e-92954f1e411f
+# ╟─7a3ba94d-4995-40a1-99c0-cee5cf70f86a
+# ╠═ef4c6947-7534-4262-8436-92c28fcddb88
+# ╠═2069bc26-71bc-404b-b0f1-8bf25b3d99d1
+# ╟─35a10f78-df54-4d68-adda-61aea2ef6ddb
+# ╠═37ff6a8b-6352-4a38-b40d-a306cbbd98f7
+# ╟─2cbf3f7c-367b-47b1-a7b9-2e0821ef365a
+# ╠═db6f0812-f69b-472d-b7dc-8cc0712f5605
+# ╟─2eca82dd-2f58-4e5c-ac01-f09ad0b956f7
+# ╠═0b532231-e5c0-4f25-8353-0f68f90d6bf5
+# ╟─f89febf6-f431-4dd4-88e8-0fcf76ed89e7
+# ╟─2aedcb87-b267-41fb-813f-2c46c61c2111
+# ╠═14f39cf4-9f11-46b0-aa6a-a8ee6ef1b729
+# ╠═20cd5b6d-099d-4121-8aad-f683ddff9de5
+# ╟─aefd62e0-50fa-4d07-8068-b5ac1c194bfc
+# ╠═6b80c27e-b077-4045-aa59-520856da3021
+# ╟─506f30ee-c248-4656-a82c-1db34df659ad
+# ╟─bf6cf043-d826-41d6-8c05-568558bc5e1c
+# ╟─3baef1d0-e6c8-4921-960d-dc997085dda0
+# ╠═a1aa9106-63b6-4154-b0f3-8253726e47a9
+# ╟─f1eada74-107a-4ae0-8f05-efc22f0ba9f8
+# ╠═e76b2238-7f9a-486d-84a4-6dc46bfcd544
+# ╟─6e14eb67-b2b7-473c-a6a5-8b2abe9c9e85
+# ╠═28a70fae-164e-49f6-aea9-92dfd8609be6
+# ╟─eab06327-792b-43f9-80c5-f57b8c2581e6
+# ╠═24694400-4039-41f0-9778-c115a1007502
+# ╟─6c38db6d-0770-4a6e-b865-227a7b658b20
+# ╟─84ae1279-29b7-4d85-bd0a-6288bb017a95
+# ╟─d5495d41-41f3-44d1-b6e1-95076073d484
+# ╠═b30ad480-b75e-4b70-9e6c-9d3fe82189c9
+# ╟─bfce571e-7948-44b4-8b39-72cf8cb76fa1
+# ╟─d789ca5a-f8a2-441e-9501-530a8d30cf08
+# ╠═31b79d8d-3718-4c07-acb4-25c4c7fe087c
+# ╟─f28f4546-a51a-4e55-9f84-6246375b20c6
+# ╠═effa8e34-a25d-49fb-8c8e-b70d1eb32a5c
+# ╟─f03bafa1-175c-4c9d-8e69-c05ee0c3cd81
+# ╟─0c947e1e-c6b0-4eca-ab73-8fbd08200dd7
+# ╠═7b83c246-2845-47bc-815b-c455ad29ea51
+# ╟─c4e9a74a-fa80-4238-811d-a24ba7c3727b
+# ╠═c251bc0b-84ff-4b6f-ad6c-10d77210f072
+# ╟─0d017248-abe3-46ae-a592-532b8147e61d
+# ╠═f28aa4a1-4c56-4461-b5b9-c9f4a11e2111
+# ╠═a2ce01de-d6ec-4564-9d14-11b778954d22
+# ╠═c783a9f7-d22a-4389-9631-846d50fc2a74
+# ╟─d862d37b-1306-4e4b-a2e3-380ab424b107
+# ╠═b72a4588-fed6-441c-8bee-8d5713474691
+# ╠═09094202-6632-4349-91ad-0a7010352bd4
+# ╟─fe2f4971-7cde-459d-aa6b-33679f974d7c
+# ╠═35795d9a-585c-4b43-9c88-e95428e91fb1
+# ╠═1edc503a-92bb-40cc-8263-ab7dca6e2d59
+# ╠═2510ea0e-7630-4f36-a946-ea4a79253c9e
+# ╟─aba6e772-fe36-4286-bbf5-efb227625797
+# ╠═40ab20ce-2553-4c18-85f8-a995bf583f06
+# ╠═77e1d120-7f0d-420a-a5f9-0fe68606240d
+# ╠═66dee6e7-4eb7-4870-98d4-978de24d06d2
+# ╟─8fc4cef8-6f01-4bb6-bc25-93764c104c0a
+# ╠═545fe144-2cec-4f22-b531-1f0fdee68a7a
+# ╠═2912e2eb-7e94-4e16-92a2-40ab785854e8
+# ╟─a19aae44-cad8-4d11-828f-f40c64c8fee8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
