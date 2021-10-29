@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.17.0
 
 using Markdown
 using InteractiveUtils
@@ -1103,7 +1103,7 @@ md"We of course want to use this `apply_on_sub` function to reuse our previous f
 md"First, pick a quantization table. By default we will just copy `Q_table` from before. You are encouraged to come up with your own quantization tables or to look for some on the internet."
 
 # ╔═╡ 63f2e841-13a2-4bb9-bd4d-904fa9d51011
-Q = copy(Q_table);
+Q = copy(Q_table); #define this Q yourself
 
 # ╔═╡ fae18f9e-267b-48c4-880c-728455c5200a
 md"Then we begin the algorithm as described in the summary in the previous section."
@@ -1146,6 +1146,9 @@ showimage(ape_reconstructed)
 
 # ╔═╡ 15e35d70-56ab-4e02-ac71-2fa78e417982
 md"Now try multiplying `Q_table` to increase or decrease the compression rate."
+
+# ╔═╡ de747f85-0a94-4d0b-907b-021e36acd431
+heatmap(reverse(ape - ape_reconstructed, dims=1))
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1421,9 +1424,9 @@ version = "1.0.10+0"
 
 [[GLFW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Pkg", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll"]
-git-tree-sha1 = "dba1e8614e98949abfa60480b13653813d8f0157"
+git-tree-sha1 = "0c603255764a1fa0b61752d2bec14cfbd18f7fe8"
 uuid = "0656b61e-2033-5cc2-a64a-77c0f6c09b89"
-version = "3.3.5+0"
+version = "3.3.5+1"
 
 [[GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Printf", "Random", "Serialization", "Sockets", "Test", "UUIDs"]
@@ -1759,9 +1762,9 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
-git-tree-sha1 = "c253236b0ed414624b083e6b72bfe891fbd2c7af"
+git-tree-sha1 = "5455aef09b40e5020e1520f551fa3135040d4ed0"
 uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
-version = "2021.1.1+1"
+version = "2021.1.1+2"
 
 [[MacroTools]]
 deps = ["Markdown", "Random"]
@@ -2537,5 +2540,6 @@ version = "0.9.1+5"
 # ╠═17797b73-fe82-4722-b6ab-0ca7b340ba69
 # ╠═6129b8cb-633d-4179-bf72-3bb7c31706a1
 # ╟─15e35d70-56ab-4e02-ac71-2fa78e417982
+# ╠═de747f85-0a94-4d0b-907b-021e36acd431
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
