@@ -135,7 +135,10 @@ md"**Exercise:** try to make sliders that modify values `α`, `β` and `γ`. The
 in the next cell. Experiment with different ranges. You can copy and modify the code from the other sliders."
 
 # ╔═╡ 297bba22-b28a-4f82-baf9-c472a985f737
-#code for sliders
+let t = LinRange(0,1,101)
+
+	md"$(@bind α Slider(t)), $(@bind β Slider(t)), $(@bind γ Slider(t))"
+end
 
 # ╔═╡ cd31de7a-75ef-4722-b180-e78b58448231
 md"""
@@ -144,7 +147,16 @@ md"""
 """
 
 # ╔═╡ 8f967b5a-f29e-444d-8df4-3c7660d4f591
-#code for displaying images
+let
+	H = channelview(mandrill_HSI)[1, :, :]
+
+S = channelview(mandrill_HSI)[2, :, :]
+
+I = channelview(mandrill_HSI)[3, :, :]
+
+	colorview(HSI, StackedView(α * H, β * S, γ * I))
+
+end
 
 # ╔═╡ 5b6e5cd8-8bab-4687-a7e2-6a348a3634b7
 md"""
@@ -281,14 +293,14 @@ const N = 8
 function unitvector(k::Int)
 	v = zeros(N)
 	#exercise: return vector of size N where the kth element is 1 and the others 0
-	
+	v[k] = 1.0
 	return v
 end
 
 # ╔═╡ 8a8fb63f-2893-4110-af62-ed56ccb7693f
 md"""
 !!! hint
-	add `v[k] = 0` below the initialization of `v` inside the `unitvector` function.
+	add `v[k] = 1.0` below the initialization of `v` inside the `unitvector` function.
 """
 
 # ╔═╡ 28032d35-b1a2-4cc0-8f6c-6a8b8af45666
@@ -316,7 +328,7 @@ First, define the value ``k_m`` from the DCT equations as a function:"
 function k(m::Int)
 	#implement this function correctly
 	
-	return 0.0
+	return (m == 0 ? 1/sqrt(2) : 1.0)
 end
 
 # ╔═╡ fce789f4-724b-4f48-81a4-bd77b9005e60
@@ -329,15 +341,21 @@ md"""
 md"Next, use this `k` function to define the matrices:"
 
 # ╔═╡ ad9ceaa9-83a8-4910-968f-17e69ecc7b31
-DCT_II_Matrix = [0 for m=0:N-1, n=0:N-1]
-
-# ╔═╡ 70c04d56-c7c7-45f0-8148-a5b6f228880e
-DCT_III_Matrix = [0 for m=0:N-1, n=0:N-1]
+DCT_II_Matrix = [sqrt(2/N)*k(m)*cos( (m*(n+0.5)*π) / N) for m=0:N-1, n=0:N-1]
 
 # ╔═╡ d7815fde-1073-461e-baad-3110937f5c9e
 md"""
 !!! hint
 	In `DCT_II_Matrix` replace `[0 ...` with `[sqrt(2/N)*k(m)*cos( (m*(n+0.5)*π) / N) ...`
+		"""
+
+# ╔═╡ 70c04d56-c7c7-45f0-8148-a5b6f228880e
+DCT_III_Matrix = [sqrt(2/N)*k(n)*cos( (n*(m+0.5)*π) / N) for m=0:N-1, n=0:N-1]
+
+# ╔═╡ f27c2860-8798-4715-b6e7-dc8414fa65e3
+md"""
+!!! hint
+	In `DCT_III_Matrix` replace `[0 ...` with `[sqrt(2/N)*k(n)*cos( (n*(m+0.5)*π) / N) ...`
 		"""
 
 # ╔═╡ 382b9046-d722-43d7-9708-355c0d76b7ae
@@ -364,13 +382,14 @@ begin
 end
 
 # ╔═╡ 4896169d-1329-4af4-81c5-134e19cb8f25
-DCT_III(DCT_II(unitvector(3))) |> clean_round
+DCT_III(DCT_II(unitvector(4))) |> clean_round
 
 # ╔═╡ 1ae10f9f-d10e-4a4f-b0fd-65255a1c222d
 md"Using the DCT function(s), modify the code that plotted the unit vectors to show the basis vectors of the DCT"
 
 # ╔═╡ fdcef284-cf62-4108-8ccb-ecf29d176aaa
 #exercise
+plot([discreteplot(DCT_III(unitvector(k))) for k=1:N]...)
 
 # ╔═╡ 2d382a94-560e-4aa7-86bb-53f0d7d34859
 md"
@@ -416,7 +435,7 @@ plot(discreteplot(z), discreteplot(z_compressed))
 md"Finally, modify the code in the next cell so that it displays the original signal `y` to the signal reconstructed from `z_compressed`."
 
 # ╔═╡ 8fbb97d9-6ec2-4f9e-8bbd-1fd629c1ebff
-plot(discreteplot(y), discreteplot( zeros(N) )) #replace the zeros
+plot(discreteplot(y), discreteplot( DCT_III(z_compressed ))) #replace the zeros
 
 # ╔═╡ 2120dea5-6640-4bfc-a12b-1ca1ab41e380
 md"#### Showing that DCT-II and DCT-III are each other's inverses
@@ -505,7 +524,7 @@ Let's immediately implement these the `fDCT` and the `iDCT`. Keep in mind that J
 
 # ╔═╡ bea14dbc-22f6-4827-8ef8-430506ada566
 function fDCT(f::AbstractMatrix)
-	return zeros(N, N) #exercise: replace
+	return [1/4 * k(u) * k(v) * sum(f[y+1, x+1] * cos( ((2x+1)*u*π)/16) * cos( ((2y+1)*v*π)/16) for y=0:N-1, x=0:N-1) for v=0:N-1, u=0:N-1]
 end
 
 # ╔═╡ 29d0df00-c037-4dfa-be6a-ac1bacb24dfb
@@ -517,7 +536,7 @@ md"
 
 # ╔═╡ bf5f1e1b-0d1a-45bd-9860-eb693cbdcb37
 function iDCT(F::AbstractMatrix)
-	return zeros(N, N) #exercise: replace
+	return [1/4 * sum(k(u)*k(v)*F[v+1, u+1]*cos(((2x+1)*u*π)/16)*cos( ((2y+1)*v*π)/16) for v=0:N-1, u=0:N-1) for  y=0:N-1, x=0:N-1]
 end
 
 # ╔═╡ 7867fe0f-98d6-48e8-843d-3524c48c4507
@@ -580,7 +599,7 @@ md"First, let's create 2D basis functions as we did in the 1D case. For ``8\time
 # ╔═╡ 06f12618-ae69-4df7-8437-b21970454f47
 function basisimage(n::Int)
 	u = zeros(N, N)
-	#exercise: complete this function
+	u[n] = 1.0
 	return u
 end
 
@@ -609,6 +628,7 @@ md"This means you can also use `showmatrix` to display your `basisimage` matrice
 
 # ╔═╡ af4dbb1a-d969-4d5a-b847-969ad72cb081
 #exercise: use showmatrix in combination with basisimage
+showmatrix(basisimage(10))
 
 # ╔═╡ 3f9acd0e-8910-4d60-a5fe-14598063de11
 md"!!! hint
@@ -619,7 +639,7 @@ md"!!! hint
 md"The next cell will visualize `baseimage(1)` to `baseimage(64)` in a grid pattern, allowing you to verify the correctness of your implementation."
 
 # ╔═╡ e21b9f59-515a-4c62-8886-439a55c05836
-[showmatrix(basisimage(8*i + j + 1)) for i=0:7, j=0:7]
+[showmatrix(basisimage(i + 8j + 1)) for i=0:7, j=0:7]
 
 # ╔═╡ 0fdb8d99-6858-485e-b80a-42ff65288988
 md"As an exercise, modify the code used to generate the basisimages above to show the 2D DCT basis just like we did in the 1D case."
@@ -639,11 +659,13 @@ md"Before you try the entire grid, the next cell shows you how to visualize a si
 md"Now try the entire grid:"
 
 # ╔═╡ e7fb3c5a-bfcc-4656-a277-b311a5b02ad7
-#exercise: entire grid (HINT: modify the code from the previous grid)
+[showmatrix(iDCT(basisimage(i + 8j + 1))) for i=0:7, j=0:7]
+
+
 
 # ╔═╡ a0bd7604-c8a0-4373-b286-faf004de6c17
 md"!!! hint
-	`[showmatrix(iDCT(basisimage(8*i + j + 1))) for i=0:7, j=0:7]`
+	`[showmatrix(iDCT(basisimage(i + 8j + 1))) for i=0:7, j=0:7]`
 "
 
 # ╔═╡ 523a2bb4-f6d2-4497-9aff-1c478f91dccd
@@ -721,7 +743,7 @@ Let's implement our own `quantize` and `dequantize` functions. You can use `roun
 
 # ╔═╡ e0c2dfc7-6d3b-43fb-857d-39b35006cd33
 function quantize(F::AbstractMatrix, Q::AbstractMatrix)
-	return F #exercise: implement correctly
+	return  floor.(Int, F./Q .+ 0.5) 
 end
 
 # ╔═╡ 7e609a2d-8903-4717-b180-d64994fb3eb0
@@ -732,7 +754,7 @@ md"""!!! hint
 
 # ╔═╡ c5f20a8f-b145-45cc-b025-4460cfa8be96
 function dequantize(FQ::AbstractMatrix, Q::AbstractMatrix)
-	return FQ #exercise: implement correctly
+	return FQ .* Q
 end
 
 # ╔═╡ 9fdb6840-1e98-4905-91ed-db666dd5f09f
@@ -745,7 +767,7 @@ md"Instead of thresholding `F_ape_8x8` like we did earlier, let's try to quantiz
 
 # ╔═╡ bb1edccd-db05-4b21-8079-a73765717937
 #quantize F_ape_8x8
-F_ape_8x8_Q  = zeros(N, N) #replace the zeros
+F_ape_8x8_Q  = quantize(F_ape_8x8, Q_table) #replace the zeros
 
 # ╔═╡ cbde8c90-e06c-4605-9fcc-e07b737f10a1
 md"The resulting `F_ape_8x8` is what will get stored using lossless compression"
@@ -755,19 +777,19 @@ md"Now to reconstruct the image from the compressed `F_ape_8x8_Q`, we first dequ
 
 # ╔═╡ 355165c7-f3f3-4f7c-a776-0f5498c0f0fc
 #dequantize F_ape_8x8_Q
-F_ape_8x8_dQ = zeros(N, N) #replace the zeros
+F_ape_8x8_dQ = dequantize(F_ape_8x8_Q, Q_table) #replace the zeros
 
 # ╔═╡ 69222397-6c1a-4bd6-a883-d36584deccc6
 md"Now compare `F_ape_8x8_dQ` to `F_ape_8x8`, its uncompressed/unquantized version."
 
 # ╔═╡ 3892a59d-4e82-47eb-8ef1-3befd46e7ba0
-F_ape_8x8
+round.(Int, F_ape_8x8)
 
 # ╔═╡ 26c65705-46d4-4ca3-b0de-1f1fb6ce9054
 md"Visually comparing matrices that contain frequency components might be a bit too abstract. A more interesting thing to visualize is the reconstructed image. Try to reconstruct the original image from `F_ape_8x8_dQ`. (You don't have to round the final result, the `showimage` function takes care of that.)"
 
 # ╔═╡ fadb1828-fcb3-4207-92fe-c88a75964644
-ape_8x8_dQ_reconstructed = zeros(N, N) #replace the zeros
+ape_8x8_dQ_reconstructed = iDCT(F_ape_8x8_dQ) #replace the zeros
 
 # ╔═╡ a50bf599-dcc2-4560-b276-50caa116adfc
 md"""!!! hint
@@ -797,14 +819,25 @@ function dehuffman(huffmantree) #decodes huffman tree and returns image
 	return huffmantree
 end
 
-# ╔═╡ e463e0e1-43c5-4f12-a991-f8a2c5a2645a
-	md"""#### JPEG on ``8\times 8`` block
+# ╔═╡ 44025981-0704-4f58-8835-0550800466e5
+md"Finally, we also define the dummy functions `save_to_disk` and `load_from_disk` for demonstration purposes."
 
-Summary:
+# ╔═╡ 30de9cea-db37-4b41-9630-b1ce79cabbdd
+save_to_disk(filename, x) = x
+
+# ╔═╡ 74593d63-c53a-4eb1-9047-b0089a0a5c86
+load_from_disk(filename, x) = x #of course it is ridiculous that this function would have x as an argument
+
+# ╔═╡ e463e0e1-43c5-4f12-a991-f8a2c5a2645a
+	md"""#### JPEG on an ``8\times 8`` block
+
+Summary of the complete JPEG algorithm:
 
 `img -> img - 128 -> fDCT -> Quantize -> Huffmann -> save `
 
 `load -> de-Huffmann -> Dequantize -> iDCT -> img' + 128 -> img'`
+
+Note that 128 is substracted. This is because images are stored using values ranging from 0 to 255 and subtracting 128 centers them around 0.
 
 Let's apply this on the ``8\times 8`` `jpeg_test` image. This same patch is also used in the paper that describes the JPEG standard. 
 	
@@ -1147,26 +1180,75 @@ begin
 160] |> crappy_pdf_copy
 end;
 
+# ╔═╡ 4abd4de6-4b49-4ef7-a1ff-8ba24d769d44
+md"Our test image:"
+
 # ╔═╡ 7ab5d4ef-bbcf-49fa-a7e8-861e26e5c046
 jpeg_test
 
+# ╔═╡ 3b2dcff4-3dec-4045-9da6-dbbd58259939
+md"Now compute its fDCT, don't forget to center around zero."
+
 # ╔═╡ 8146e32c-23ef-4b90-816d-6489428d7a99
-jpeg_test_fdct = 0
+jpeg_test_fdct = fDCT(jpeg_test .- 128)
+
+# ╔═╡ b348d000-4c4e-4de5-96d7-60da8c25421d
+md"!!! hint
+	`fDCT(jpeg_test .- 128)`
+"
 
 # ╔═╡ 01287455-52df-45e0-803a-e1b525d68a73
-jpeg_test_q = 0
+jpeg_test_q = quantize(jpeg_test_fdct, Q_table)
+
+# ╔═╡ 9bc6ff2a-19c0-4c2a-9329-44fecb721cfb
+md"!!! hint
+	`quantize(jpeg_test_fdct, Q_table)`
+"
+
+# ╔═╡ b72ef8a0-1816-4773-965b-c8cb7ad13562
+md"The `huffman`, `save_to_disk`, `load_from_disk` and `dehuffman` functions are just there for show. You could implement them as a homework exercise, although there probably already exists a `Huffman.jl` package"
 
 # ╔═╡ 341c7ae5-d3e6-4731-857b-dc507883f1a5
-jpeg_test_huffman = 0; #keep the ; to suppress output
+jpeg_test_huffman = huffman(jpeg_test_q)
+
+# ╔═╡ 47054fde-66d6-46e5-a2bf-eb08822d8a4d
+jpeg_test_save = save_to_disk("test.jpg", jpeg_test_huffman); #this is equal to jpeg_test_huffman
+
+# ╔═╡ f0ca2719-7285-46a1-b391-1092fb46ddd5
+jpeg_test_load = load_from_disk("test.jpg", jpeg_test_save); #this is still equal to jpeg_test_huffman. A real load function would of course never have the second argument
 
 # ╔═╡ 1b8ecc6b-4648-497d-a10e-45536c38a140
-jpeg_test_dehuffman = 0;
+jpeg_test_dehuffman = dehuffman(jpeg_test_load)
+
+# ╔═╡ 51ac60e5-8978-4d71-bc72-dddddf95e050
+md"Next, we can compute the dequantization of `jpeg_test_dehuffman`. Note that huffman encoding is lossless, so `jpeg_test_dehuffman` should be exactly equal to `jpeg_test_q`."
 
 # ╔═╡ af556b44-3f25-44be-87b1-36060f40dbbc
-jpeg_test_dq = 0
+jpeg_test_dq = dequantize(jpeg_test_dehuffman, Q_table)
+
+# ╔═╡ bee5ad35-ba0c-4d5c-a1bc-efc6cf85d4c4
+md"!!! hint
+	`dequantize(jpeg_test_dehuffman, Q_table)`
+"
 
 # ╔═╡ adc580f9-d07a-4abf-b4ea-5fc1832dd03d
-jpeg_test_rec = 0
+jpeg_test_rec = iDCT(jpeg_test_dq) .+ 128
+
+# ╔═╡ 67fcf0c6-06b5-41ca-93d0-fe66324b414d
+md"!!! hint
+	`iDCT(jpeg_test_dq) .+ 128`
+"
+
+# ╔═╡ 0cb4042f-8259-478e-bad2-b3a722039f45
+md"Now you can round `jpeg_test_rec` and compare it to `solution_jpeg_test_rec`"
+
+# ╔═╡ eb9d184c-d486-4f20-93f3-b9842c88eb3d
+solution_jpeg_test_rec - floor.(Int, 0.5 .+ jpeg_test_rec)
+
+# ╔═╡ 85529a43-92ef-4d1f-b1e7-f60d8faa13ea
+md"!!! hint
+	`solution_jpeg_test_rec - floor.(Int, 0.5 .+ jpeg_test_rec)`
+"
 
 # ╔═╡ af260e9a-308a-4c1d-8049-fe5b77c1ae9f
 md"""#### JPEG on an entire image
@@ -1209,7 +1291,11 @@ apply_on_sub(sub_func, subimg_test, 2)
 md"We of course want to use this `apply_on_sub` function to reuse our previous functions. Let's go through a full application of the JPEG algorithm."
 
 # ╔═╡ ecc0a85c-564c-477a-84d2-f8be10693779
-md"First, pick a quantization table. By default we will just copy `Q_table` from before. You are encouraged to come up with your own quantization tables or to look for some on the internet."
+md"### The full JPEG algorithm on the full 512x512 ape image
+
+First, pick a quantization table. By default we will just copy `Q_table` from before. You are encouraged to come up with your own quantization tables or to look for some on the internet. 
+
+Setting `Q = ones(N,N)` leads to minimal compression, caused by rounding from the `floor` function."
 
 # ╔═╡ 63f2e841-13a2-4bb9-bd4d-904fa9d51011
 Q = copy(Q_table) #define this Q yourself, overwrite with any 8x8 table
@@ -1229,17 +1315,22 @@ ape_fdct = apply_on_sub(fDCT, ape_minus)
 # ╔═╡ 448894ba-ccc0-4a58-836c-a40d72d19d39
 ape_q = apply_on_sub(x -> quantize(x, Q), ape_fdct)
 
+# ╔═╡ 274a8748-4c90-4e9c-bbf9-f9635695f540
+md"Note how the quantized version of the image, i.e. `ape_q`, consists of ``8\times 8`` patches of quantized coefficients."
+
 # ╔═╡ fc1ef559-a7bc-4aed-90ff-8b500bcbc44e
 ape_huff = apply_on_sub(huffman, ape_q); # == ape_q
 
 # ╔═╡ 046dd696-47f1-448b-8ac9-6a0baa0f0890
 #save to disk
+ape_save = save_to_disk("ape.jpg", ape_huff); #dummy function for demonstration purposes
 
 # ╔═╡ 62db95a7-72f3-40de-bff6-48a8b33a24ec
 #load from disk
+ape_load = load_from_disk("ape.jpg", ape_save) #dummy function for demonstration purposes
 
 # ╔═╡ 39187e75-2ade-4296-8a27-cdd2d4e097c5
-ape_dehuff = apply_on_sub(dehuffman, ape_huff); # == ape_q still
+ape_dehuff = apply_on_sub(dehuffman, ape_load); #ape_load == ape_q still
 
 # ╔═╡ dfb4f706-3fe2-43bd-9e01-3fba3b0898f9
 ape_dq = apply_on_sub(x -> dequantize(x, Q), ape_dehuff)
@@ -1255,6 +1346,9 @@ showimage(ape_reconstructed)
 
 # ╔═╡ 15e35d70-56ab-4e02-ac71-2fa78e417982
 md"Now try multiplying `Q_table` to increase or decrease the compression rate."
+
+# ╔═╡ e278d23a-0394-48c9-aa0d-944a1a4a76c6
+md"This heatmap shows the difference between the original image and its JPEG compressed version."
 
 # ╔═╡ de747f85-0a94-4d0b-907b-021e36acd431
 heatmap(reverse(ape - ape_reconstructed, dims=1))
@@ -2660,7 +2754,7 @@ version = "0.9.1+5"
 # ╠═6cec67b9-adc2-4015-b99c-35c91477aaa2
 # ╟─afb1ebc3-cfec-47ad-b42e-c97559b1e9f1
 # ╠═65dd7c05-4338-480d-8b8d-9a60af44b1ff
-# ╠═8ba903f4-ce62-422c-83db-6076a6c6b932
+# ╟─8ba903f4-ce62-422c-83db-6076a6c6b932
 # ╠═297bba22-b28a-4f82-baf9-c472a985f737
 # ╟─cd31de7a-75ef-4722-b180-e78b58448231
 # ╠═8f967b5a-f29e-444d-8df4-3c7660d4f591
@@ -2681,8 +2775,9 @@ version = "0.9.1+5"
 # ╟─fce789f4-724b-4f48-81a4-bd77b9005e60
 # ╟─6447cae8-2f83-42c9-97e1-dc3c1a506624
 # ╠═ad9ceaa9-83a8-4910-968f-17e69ecc7b31
+# ╟─d7815fde-1073-461e-baad-3110937f5c9e
 # ╠═70c04d56-c7c7-45f0-8148-a5b6f228880e
-# ╠═d7815fde-1073-461e-baad-3110937f5c9e
+# ╟─f27c2860-8798-4715-b6e7-dc8414fa65e3
 # ╟─382b9046-d722-43d7-9708-355c0d76b7ae
 # ╠═3d49ae24-11b2-46e1-bfcc-96cf4f85cc25
 # ╠═bc6a83f7-e2ea-4d32-9f02-af61cb24b727
@@ -2771,15 +2866,31 @@ version = "0.9.1+5"
 # ╟─8385b715-6a9d-4938-9886-09f9d0e81bf3
 # ╠═d2eb6604-5f64-492b-ad86-6446613b091e
 # ╠═8ff477eb-938f-48c2-84c1-519f741ec142
+# ╟─44025981-0704-4f58-8835-0550800466e5
+# ╠═30de9cea-db37-4b41-9630-b1ce79cabbdd
+# ╠═74593d63-c53a-4eb1-9047-b0089a0a5c86
 # ╟─e463e0e1-43c5-4f12-a991-f8a2c5a2645a
 # ╟─bb18bcd3-5251-4b17-8e5b-f96c0d667aec
+# ╟─4abd4de6-4b49-4ef7-a1ff-8ba24d769d44
 # ╠═7ab5d4ef-bbcf-49fa-a7e8-861e26e5c046
+# ╟─3b2dcff4-3dec-4045-9da6-dbbd58259939
 # ╠═8146e32c-23ef-4b90-816d-6489428d7a99
+# ╟─b348d000-4c4e-4de5-96d7-60da8c25421d
 # ╠═01287455-52df-45e0-803a-e1b525d68a73
+# ╟─9bc6ff2a-19c0-4c2a-9329-44fecb721cfb
+# ╟─b72ef8a0-1816-4773-965b-c8cb7ad13562
 # ╠═341c7ae5-d3e6-4731-857b-dc507883f1a5
+# ╠═47054fde-66d6-46e5-a2bf-eb08822d8a4d
+# ╠═f0ca2719-7285-46a1-b391-1092fb46ddd5
 # ╠═1b8ecc6b-4648-497d-a10e-45536c38a140
+# ╟─51ac60e5-8978-4d71-bc72-dddddf95e050
 # ╠═af556b44-3f25-44be-87b1-36060f40dbbc
+# ╟─bee5ad35-ba0c-4d5c-a1bc-efc6cf85d4c4
 # ╠═adc580f9-d07a-4abf-b4ea-5fc1832dd03d
+# ╟─67fcf0c6-06b5-41ca-93d0-fe66324b414d
+# ╟─0cb4042f-8259-478e-bad2-b3a722039f45
+# ╠═eb9d184c-d486-4f20-93f3-b9842c88eb3d
+# ╟─85529a43-92ef-4d1f-b1e7-f60d8faa13ea
 # ╟─af260e9a-308a-4c1d-8049-fe5b77c1ae9f
 # ╠═7e089b1a-3352-4d86-af3f-b6ff9bd09b9f
 # ╟─9158f818-0e05-4460-92f8-92a445f43e56
@@ -2794,6 +2905,7 @@ version = "0.9.1+5"
 # ╠═208c634a-f8c6-4b17-8d74-79db94b1837e
 # ╠═c8367f24-b389-457d-b490-739443bcc1f9
 # ╠═448894ba-ccc0-4a58-836c-a40d72d19d39
+# ╟─274a8748-4c90-4e9c-bbf9-f9635695f540
 # ╠═fc1ef559-a7bc-4aed-90ff-8b500bcbc44e
 # ╠═046dd696-47f1-448b-8ac9-6a0baa0f0890
 # ╠═62db95a7-72f3-40de-bff6-48a8b33a24ec
@@ -2803,6 +2915,7 @@ version = "0.9.1+5"
 # ╠═17797b73-fe82-4722-b6ab-0ca7b340ba69
 # ╠═6129b8cb-633d-4179-bf72-3bb7c31706a1
 # ╟─15e35d70-56ab-4e02-ac71-2fa78e417982
+# ╟─e278d23a-0394-48c9-aa0d-944a1a4a76c6
 # ╠═de747f85-0a94-4d0b-907b-021e36acd431
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

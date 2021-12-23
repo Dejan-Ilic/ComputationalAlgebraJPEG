@@ -507,6 +507,55 @@ end
 # ╔═╡ 44a51e99-5316-430d-a8a1-9decffe224a2
 md"**Remark:** I noticed a `@with_terminal` macro in the PlutoUI source code, which might be in the stable release by the time you are using this notebook."
 
+# ╔═╡ 7d741e20-fe5e-4168-b09d-8f1d43a86157
+md"### Generators
+
+A very convenient tool in Julia are generators. The following snippet for example generates all odd numbers between 1 and 21 (incl.)."
+
+# ╔═╡ eb0eaf33-6c64-4c6a-be1c-9a14e49a2583
+[2*k + 1 for k=0:10]
+
+# ╔═╡ 8bb16a68-cfad-4df6-bc39-5ee3ab829ad3
+md"To get the sum of said numbers, we can write:"
+
+# ╔═╡ 9f13443c-6d14-4056-b977-817d8f98d84b
+sum([2*k + 1 for k=0:10])
+
+# ╔═╡ d6b7f60a-c8ff-4cbb-98d7-6eecee8511b0
+md"But this is bad practice as the above code would first allocate an 11-element array, and then sum all of its elements. This memory allocation is unnessesairy and inefficient. A better way would be to write:"
+
+# ╔═╡ 202c2334-d6e6-47d0-8140-3688aff96271
+sum(2*k + 1 for k=0:10)
+
+# ╔═╡ a7a7618d-d6b2-4f2b-bd5f-3e1cf5626938
+md"This avoids unnessesary memory allocation. Note that in Julia `Generator`s are objects:"
+
+# ╔═╡ ef30e46b-8610-47c1-a4dd-d7fb1ba99810
+generator = (2*k + 1 for k=0:10)
+
+# ╔═╡ ba594029-fd5f-4bc9-bce0-57a375c7225d
+md"To turn a `Generator` into an `Array`/`Vector`, we can use the `collect` function:"
+
+# ╔═╡ 758889d4-4886-4a98-b7c0-1e29f95a9635
+collect(generator)
+
+# ╔═╡ 2230f507-3593-4e6a-86f3-8f788d2fed39
+md"You can also use generators to generate two or more-dimensional `Array`:"
+
+# ╔═╡ dfa53f55-84d3-4112-b91a-21cab9b41762
+[10i + j for i=1:2, j=1:4]
+
+# ╔═╡ a370d0e7-661f-4cb9-8688-bc979ca6b8e5
+md"Note that the first variable, here `i`, denotes the row, while the second variable, here 'j', denotes the column.
+
+For more complicated expressions, it might be easier to define the function outside of the generator:"
+
+# ╔═╡ d4e1da11-f5f4-48d4-9e2a-13c2df4107ea
+foo(i, j) = i + j + i^2 + j^2
+
+# ╔═╡ ae87bc5d-68e1-47dd-8070-299a9512e240
+[foo(i,j) for i=1:3, j=1:2]
+
 # ╔═╡ c4e9a74a-fa80-4238-811d-a24ba7c3727b
 md"### Type annotations and multiple dispatch
 Multiple dispatch is often marketed as Julia's *killer feature*. Let's see what all the fuss is about.
@@ -2062,6 +2111,21 @@ version = "0.9.1+5"
 # ╟─0c947e1e-c6b0-4eca-ab73-8fbd08200dd7
 # ╠═7b83c246-2845-47bc-815b-c455ad29ea51
 # ╟─44a51e99-5316-430d-a8a1-9decffe224a2
+# ╟─7d741e20-fe5e-4168-b09d-8f1d43a86157
+# ╠═eb0eaf33-6c64-4c6a-be1c-9a14e49a2583
+# ╟─8bb16a68-cfad-4df6-bc39-5ee3ab829ad3
+# ╠═9f13443c-6d14-4056-b977-817d8f98d84b
+# ╟─d6b7f60a-c8ff-4cbb-98d7-6eecee8511b0
+# ╠═202c2334-d6e6-47d0-8140-3688aff96271
+# ╟─a7a7618d-d6b2-4f2b-bd5f-3e1cf5626938
+# ╠═ef30e46b-8610-47c1-a4dd-d7fb1ba99810
+# ╟─ba594029-fd5f-4bc9-bce0-57a375c7225d
+# ╠═758889d4-4886-4a98-b7c0-1e29f95a9635
+# ╟─2230f507-3593-4e6a-86f3-8f788d2fed39
+# ╠═dfa53f55-84d3-4112-b91a-21cab9b41762
+# ╟─a370d0e7-661f-4cb9-8688-bc979ca6b8e5
+# ╠═d4e1da11-f5f4-48d4-9e2a-13c2df4107ea
+# ╠═ae87bc5d-68e1-47dd-8070-299a9512e240
 # ╟─c4e9a74a-fa80-4238-811d-a24ba7c3727b
 # ╠═c251bc0b-84ff-4b6f-ad6c-10d77210f072
 # ╟─0d017248-abe3-46ae-a592-532b8147e61d
