@@ -9,7 +9,6 @@ Interactieve course on JPEG
 6) In Pluto Notebooks, open the downloaded files(s).
 	1) *julia_intro.jl* provides an introduction to Julia. It is recommended but not mandatory to go through this notebook before class.
 	2) *jpeg.jl* is that document that we will use in class.
-	3) *curus.jl* is a combination of the former two and will probably be removed in the future.
 
 
 Made possible thanks to: https://github.com/fonsp/Pluto.jl
