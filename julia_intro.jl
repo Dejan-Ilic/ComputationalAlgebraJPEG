@@ -9,7 +9,7 @@ using Images, PlutoUI, Plots, Random
 
 # ╔═╡ 04f64cf1-0dd5-4a81-91f7-01cd4f71277f
 md"""
-# Computational Algebra
+# Computer Algebra
 # JPEG session 
 
 In  this Pluto notebook we will learn the basics of Julia.
