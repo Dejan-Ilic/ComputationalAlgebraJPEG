@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.1
+# v0.17.4
 
 using Markdown
 using InteractiveUtils
@@ -15,7 +15,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ c83f1947-acdb-4458-b5d2-5b9b75c46544
-using Images, TestImages, PlutoUI, Plots, Random
+using Images, TestImages, PlutoUI, Plots, Random, Kroki
 
 # ╔═╡ 928488a0-0af4-11ec-34a7-23dcf9e45875
 md"""
@@ -703,7 +703,7 @@ md"Finally, we visually inspect the images (original: left, reconstructed: right
 [showimage(ape_8x8), showimage(ape_8x8_reconstructed)]
 
 # ╔═╡ d4be2fbb-eb41-4cae-845b-9d036b74548d
-md"The JPEG algorithm works in a similar way, except for the thresholding. Instead of thresholding, quantization is used."
+md"The two images should look alike. This indicates the DCT components can be compressed quite a bit. The JPEG compression algorithm exploits this, but instead of thresholding, it uses quantization."
 
 # ╔═╡ 1473b473-4298-4f69-a722-c5ba88bdea85
 md"#### Quantization
@@ -838,11 +838,45 @@ end
 	md"""#### JPEG on an ``8\times 8`` block
 
 Summary of the complete JPEG algorithm:
+"""
 
-`img -> img - 128 -> fDCT -> Quantize -> Huffmann -> save `
+# ╔═╡ 51e26944-9a23-4e7e-b564-42956d7dd9ae
+blockdiag"""blockdiag {
+"img" -> "img - 128" -> "fDCT" -> quantize
+group {
+          label = "(not in this course)";
+          color = "#EEEEAA";
 
-`load -> de-Huffmann -> Dequantize -> iDCT -> img' + 128 -> img'`
+          // Set group shape to 'line group' (default is box)
+          //shape = line;
 
+          // Set line style (effects to 'line group' only)
+          //style = dashed;
+		"huffman decode" <- "load .jpg" <- "save as .jpg" <- "huffman encode"  
+}
+
+dequantize -> iDCT -> "img rec. + 128" -> "img rec." 
+
+img [color = "greenyellow", shape = roundedbox];
+"img rec." [color = "lightgreen", shape = roundedbox];
+
+"save as .jpg" [shape = flowchart.database, color="lightgray"];
+"load .jpg" [shape = flowchart.database, color="lightgray"];
+"huffman encode" [color="lightgray"];
+"huffman decode" [color="lightgray"];
+
+quantize -> "huffman encode" [folded];
+"dequantize" <- "huffman decode" [folded];
+
+}
+"""
+
+# ╔═╡ f2b65e80-9453-4042-b6fd-86fc6e03c152
+
+#`img -> img - 128 -> fDCT -> Quantize -> Huffmann -> save `
+
+#`load -> de-Huffmann -> Dequantize -> iDCT -> img' + 128 -> img'`
+md"""
 Note that 128 is substracted. This is because images are stored using values ranging from 0 to 255 and subtracting 128 centers them around 0.
 
 Let's apply this on the ``8\times 8`` `jpeg_test` image. This same patch is also used in the paper that describes the JPEG standard. 
@@ -1363,6 +1397,7 @@ heatmap(reverse(ape - ape_reconstructed, dims=1))
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+Kroki = "b3565e16-c1f2-4fe9-b4ab-221c88942068"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -1370,6 +1405,7 @@ TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
 
 [compat]
 Images = "~0.25.0"
+Kroki = "~0.1.0"
 Plots = "~1.25.3"
 PlutoUI = "~0.7.27"
 TestImages = "~1.6.2"
@@ -1393,9 +1429,9 @@ version = "1.1.4"
 
 [[Adapt]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "84918055d15b3114ede17ac6a7182f68870c16f7"
+git-tree-sha1 = "9faf218ea18c51fcccaf956c8d39614c9d30fe8b"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "3.3.1"
+version = "3.3.2"
 
 [[ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -1461,9 +1497,9 @@ version = "0.2.2"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "4c26b4e9e91ca528ea212927326ece5918a04b47"
+git-tree-sha1 = "d711603452231bad418bd5e0c91f1abd650cba71"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.11.2"
+version = "1.11.3"
 
 [[ChangesOfVariables]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
@@ -1476,6 +1512,12 @@ deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "SparseArray
 git-tree-sha1 = "75479b7df4167267d75294d14b58244695beb2ac"
 uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 version = "0.14.2"
+
+[[CodecZlib]]
+deps = ["TranscodingStreams", "Zlib_jll"]
+git-tree-sha1 = "ded953804d019afa9a3f98981d99b33e3db7b6da"
+uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
+version = "0.7.0"
 
 [[ColorSchemes]]
 deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random"]
@@ -1539,10 +1581,10 @@ uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.9.0"
 
 [[DataStructures]]
-deps = ["InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "88d48e133e6d3dd68183309877eac74393daa7eb"
+deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
+git-tree-sha1 = "3daef5523dd2e769dad2365274f760ff5f282c7d"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.17.20"
+version = "0.18.11"
 
 [[DataValueInterfaces]]
 git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
@@ -1727,10 +1769,10 @@ uuid = "42e2da0e-8278-4e71-bc24-59509adca0fe"
 version = "1.0.2"
 
 [[HTTP]]
-deps = ["Base64", "Dates", "IniFile", "Logging", "MbedTLS", "NetworkOptions", "Sockets", "URIs"]
-git-tree-sha1 = "0fa77022fe4b511826b39c894c90daf5fce3334a"
+deps = ["Base64", "Dates", "IniFile", "MbedTLS", "Sockets"]
+git-tree-sha1 = "c7ec02c4c6a039a98a15f955462cd7aea5df4508"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "0.9.17"
+version = "0.8.19"
 
 [[HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
@@ -1929,9 +1971,9 @@ version = "1.0.0"
 
 [[JLD2]]
 deps = ["DataStructures", "FileIO", "MacroTools", "Mmap", "Pkg", "Printf", "Reexport", "TranscodingStreams", "UUIDs"]
-git-tree-sha1 = "5335c4c9a30b4b823d1776d2db09882cbfac9f1e"
+git-tree-sha1 = "09ef0c32a26f80b465d808a1ba1e85775a282c97"
 uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-version = "0.4.16"
+version = "0.4.17"
 
 [[JLLWrappers]]
 deps = ["Preferences"]
@@ -1950,6 +1992,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "d735490ac75c5cb9f1b00d8b5509c11984dc6943"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
 version = "2.1.0+0"
+
+[[Kroki]]
+deps = ["Base64", "CodecZlib", "DocStringExtensions", "HTTP"]
+git-tree-sha1 = "1f0c3d257c94012f79d0381914460b2339fe1be9"
+uuid = "b3565e16-c1f2-4fe9-b4ab-221c88942068"
+version = "0.1.0"
 
 [[LAME_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2203,9 +2251,9 @@ version = "0.3.12"
 
 [[PaddedViews]]
 deps = ["OffsetArrays"]
-git-tree-sha1 = "646eed6f6a5d8df6708f15ea7e02a7a2c4fe4800"
+git-tree-sha1 = "03a7a85b76381a3d04c7a1656039197e70eda03d"
 uuid = "5432bcbf-9aad-5242-b902-cca2824c8663"
-version = "0.5.10"
+version = "0.5.11"
 
 [[Parameters]]
 deps = ["OrderedCollections", "UnPack"]
@@ -2261,9 +2309,9 @@ version = "0.7.27"
 
 [[Preferences]]
 deps = ["TOML"]
-git-tree-sha1 = "00cfd92944ca9c760982747e9a1d0d5d86ab1e5a"
+git-tree-sha1 = "2cf929d64681236a2e074ffafb8d568733d2e6af"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
-version = "1.2.2"
+version = "1.2.3"
 
 [[Printf]]
 deps = ["Unicode"]
@@ -2416,15 +2464,15 @@ deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[StatsAPI]]
-git-tree-sha1 = "0f2aa8e32d511f758a2ce49208181f7733a0936a"
+git-tree-sha1 = "d88665adc9bcf45903013af0982e2fd05ae3d0a6"
 uuid = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
-version = "1.1.0"
+version = "1.2.0"
 
 [[StatsBase]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "2bb0cb32026a66037360606510fca5984ccc6b75"
+git-tree-sha1 = "51383f2d367eb3b444c961d485c565e4c0cf4ba0"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.33.13"
+version = "0.33.14"
 
 [[StringDistances]]
 deps = ["Distances", "StatsAPI"]
@@ -2475,10 +2523,10 @@ uuid = "5e47fb64-e119-507b-a336-dd2b206d9990"
 version = "1.6.2"
 
 [[TiffImages]]
-deps = ["ColorTypes", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "OffsetArrays", "OrderedCollections", "PkgVersion", "ProgressMeter"]
-git-tree-sha1 = "945b8d87c5e8d5e34e6207ee15edb9d11ae44716"
+deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "OffsetArrays", "PkgVersion", "ProgressMeter", "UUIDs"]
+git-tree-sha1 = "c342ae2abf4902d65a0b0bf59b28506a6e17078a"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
-version = "0.4.3"
+version = "0.5.2"
 
 [[TiledIteration]]
 deps = ["OffsetArrays"]
@@ -2491,11 +2539,6 @@ deps = ["Random", "Test"]
 git-tree-sha1 = "216b95ea110b5972db65aa90f88d8d89dcb8851c"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.9.6"
-
-[[URIs]]
-git-tree-sha1 = "97bbe755a53fe859669cd907f2d96aee8d2c1355"
-uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
-version = "1.3.0"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]
@@ -2878,6 +2921,8 @@ version = "0.9.1+5"
 # ╠═30de9cea-db37-4b41-9630-b1ce79cabbdd
 # ╠═74593d63-c53a-4eb1-9047-b0089a0a5c86
 # ╟─e463e0e1-43c5-4f12-a991-f8a2c5a2645a
+# ╟─51e26944-9a23-4e7e-b564-42956d7dd9ae
+# ╟─f2b65e80-9453-4042-b6fd-86fc6e03c152
 # ╟─bb18bcd3-5251-4b17-8e5b-f96c0d667aec
 # ╟─4abd4de6-4b49-4ef7-a1ff-8ba24d769d44
 # ╠═7ab5d4ef-bbcf-49fa-a7e8-861e26e5c046
