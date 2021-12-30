@@ -1,5 +1,5 @@
 # Computer Algebra JPEG
-Interactieve course on JPEG
+Interactive course on JPEG
 
 1) Install Julia from https://julialang.org/downloads/
 2) Download the file(s) in this project (on github, click "Code" and "Download ZIP") and unpack them
@@ -9,6 +9,10 @@ Interactieve course on JPEG
 6) In Pluto Notebooks, open the downloaded files(s).
 	1) **julia_intro.jl** provides an introduction to Julia. It is recommended but not mandatory to go through this notebook before class.
 	2) **jpeg.jl** is the notebook that we will use in class.
+
+(!) These notebooks might take a while to load, so try to load them well before class.
+
+(*) This notebook is based on a report I wrote in 2020. The report, written in Dutch, will be made available to students taking the course.
 
 
 Made possible thanks to: https://github.com/fonsp/Pluto.jl
