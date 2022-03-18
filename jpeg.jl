@@ -709,7 +709,9 @@ md"Finally, we visually inspect the images (original: left, reconstructed: right
 md"The two images should look alike. This indicates the DCT components can be compressed quite a bit. The JPEG compression algorithm exploits this, but instead of thresholding, it uses quantization."
 
 # ╔═╡ 1473b473-4298-4f69-a722-c5ba88bdea85
-md"#### Quantization
+md"
+### Further compression techniques
+#### Quantization
 Given DCT coefficients ``F`` (an ``8\times 8`` matrix) and a *quantization table* ``Q``, we compute the quantized version of ``F``, ``F^Q(u,v)``, according to the following formula:
 
 ```math
@@ -838,9 +840,11 @@ function load_from_disk(filename, x) #of course it is ridiculous that this funct
 end
 
 # ╔═╡ e463e0e1-43c5-4f12-a991-f8a2c5a2645a
-	md"""#### JPEG on an ``8\times 8`` block
+md"""
+### The full JPEG Compression algorithm
+#### JPEG on an ``8\times 8`` block
 
-Summary of the complete JPEG algorithm:
+Summary of the JPEG algorithm:
 """
 
 # ╔═╡ 51e26944-9a23-4e7e-b564-42956d7dd9ae
@@ -1334,7 +1338,7 @@ apply_on_sub(sub_func, subimg_test, 2)
 md"We of course want to use this `apply_on_sub` function to reuse our previous functions. Let's go through a full application of the JPEG algorithm."
 
 # ╔═╡ ecc0a85c-564c-477a-84d2-f8be10693779
-md"### The full JPEG algorithm on the full 512x512 ape image
+md"#### The full JPEG algorithm on the full 512x512 ape image
 
 First, pick a quantization table. By default we will just copy `Q_table` from before. You are encouraged to come up with your own quantization tables or to look for some on the internet. 
 
@@ -2805,7 +2809,7 @@ version = "0.9.1+5"
 
 # ╔═╡ Cell order:
 # ╟─928488a0-0af4-11ec-34a7-23dcf9e45875
-# ╟─70cdd2c1-9f7b-4421-8ad4-8e5c5ca56e42
+# ╠═70cdd2c1-9f7b-4421-8ad4-8e5c5ca56e42
 # ╟─096dca13-677b-44ac-80b1-aae5f9fe0874
 # ╠═c83f1947-acdb-4458-b5d2-5b9b75c46544
 # ╟─5d9bbc4f-4931-4323-8409-9d531543f4ac
